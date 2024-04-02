@@ -1,30 +1,23 @@
+#!/usr/bin/env bun
+
 import cac from 'cac';
-import { z } from 'zod';
 import { createContext } from './ctx';
-import { kClient, kDb, kServer } from './symbols';
+import { kClient, kDb, kOptions, kServer } from './symbols';
 import { Client } from 'discord.js';
 import { PrismaClient } from '@prisma/client';
+import axios from 'axios';
+import fetchAdapter from '@haverstack/axios-fetch-adapter';
+import { startOptions } from './schema';
+import { setupClient } from './client';
 
-const startOptions = z.object({
-	token: z.string({ required_error: 'Token must be present' }).min(1, 'Token must not be empty'),
-	websub: z
-		.string({ required_error: 'Websub origin must be present' })
-		.min(1, 'Websub origin must not be empty')
-		.url('Websub origin must be a valid URL'),
-	host: z.string({ required_error: 'Host must be present' }).min(1, 'Host must not be empty'),
-	port: z.coerce
-		.number({ required_error: 'Port must be present' })
-		.int('Port must be an integer')
-		.min(1, 'Port must be a positive integer')
-		.max(65535, 'Port must be less than 65536')
-});
+axios.defaults.adapter = fetchAdapter;
 
 const env = Bun.env;
 
 const cli = cac();
 
 cli
-	.command('start', 'Run the bot')
+	.command('', 'Run the bot')
 	.option('-t, --token [token]', 'Bot token', { default: env.DISCORD_TOKEN })
 	.option('-w, --websub [websub]', 'Websub origin', { default: env.WEBSUB_ORIGIN })
 	.option('-h, --host [host]', 'Host to listen on', { default: env.HOST || '0.0.0.0' })
@@ -44,17 +37,55 @@ cli
 			process.exit(1);
 		}
 		const ctx = createContext();
-		ctx.set(kClient, new Client({ intents: [] }));
+		ctx.set(kOptions, opts.data);
 		ctx.set(kDb, new PrismaClient());
+		ctx.set(kClient, new Client({ intents: [], partials: [] }));
+		ctx.set(
+			kServer,
+			Bun.serve({
+				hostname: opts.data.host,
+				port: opts.data.port,
+				fetch(request) {
+					if (request.method === 'HEAD' || request.method === 'GET') {
+						return new Response('404 Not Found', { status: 404, headers: { 'Content-Type': 'text/plain' } });
+					}
+					return new Response('405 Method Not Allowed', { status: 405, headers: { 'Content-Type': 'text/plain' } });
+				}
+			})
+		);
 
 		const cleanup = async () => {
+			console.log('Program shutting down');
 			ctx.get(kServer).stop();
 			await ctx.get(kClient).destroy();
 			await ctx.get(kDb).$disconnect();
+			process.exit(0);
 		};
 
 		process.once('SIGINT', cleanup);
 		process.once('SIGTERM', cleanup);
+
+		await setupClient(ctx);
+	});
+
+cli
+	.command('clear-commands', 'Clear all commands from the bot')
+	.option('-t, --token [token]', 'Bot token', { default: env.DISCORD_TOKEN })
+	.action(async (options: { token: string }) => {
+		const client = new Client({ intents: [], partials: [] });
+
+		client.on('ready', async () => {
+			if (client.application) {
+				client.application.commands.set([]);
+			}
+			for (const guild of client.guilds.cache.values()) {
+				console.log('[bot]', 'Clearing commands', { guild: guild.id });
+				await guild.commands.set([]);
+			}
+			process.exit(0);
+		});
+
+		await client.login(options.token);
 	});
 
 cli.help();

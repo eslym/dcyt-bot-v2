@@ -3,21 +3,23 @@
 	"module": "index.ts",
 	"type": "module",
 	"devDependencies": {
+		"@eslym/youtube-utilities": "^1.0.13",
+		"@haverstack/axios-fetch-adapter": "^0.12.0",
 		"@types/bun": "latest",
 		"@types/node-cron": "^3.0.11",
 		"axios": "^1.6.8",
 		"cac": "^6.7.14",
 		"prettier": "^3.2.5",
-		"zod": "^3.22.4"
+		"zod": "^3.22.4",
+		"discord.js": "^14.14.1",
+		"node-cron": "^3.0.3"
 	},
 	"peerDependencies": {
 		"typescript": "^5.0.0"
 	},
 	"dependencies": {
-		"@eslym/youtube-utilities": "^1.0.13",
 		"@prisma/client": "^5.11.0",
-		"discord.js": "^14.14.1",
-		"node-cron": "^3.0.3",
+		"jsdom": "^21.0.0",
 		"prisma": "^5.11.0",
 		"xmlbuilder2": "^3.1.1"
 	}

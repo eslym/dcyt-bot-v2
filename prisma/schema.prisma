@@ -14,31 +14,49 @@ datasource db {
 }
 
 model Guild {
-  id        String         @id
-  language  String?
-  createdAt DateTime?      @default(now())
-  updatedAt DateTime?      @updatedAt
-  Channels  GuildChannel[]
+  id       String  @id
+  language String?
+
+  publishText    String?
+  scheduleText   String?
+  rescheduleText String?
+  upcomingText   String?
+  liveText       String?
+
+  createdAt DateTime? @default(now())
+  updatedAt DateTime? @updatedAt
+
+  Channels GuildChannel[]
 }
 
 model GuildChannel {
-  id            String                @id
-  guildId       String
-  createdAt     DateTime?             @default(now())
-  updatedAt     DateTime?             @updatedAt
+  id      String @id
+  guildId String
+
+  publishText    String?
+  scheduleText   String?
+  rescheduleText String?
+  upcomingText   String?
+  liveText       String?
+
+  createdAt DateTime? @default(now())
+  updatedAt DateTime? @updatedAt
+
   Guild         Guild                 @relation(fields: [guildId], references: [id], onDelete: Cascade)
   Subscriptions YoutubeSubscription[]
 }
 
 model YoutubeChannel {
-  id               String                @id
-  webhookId        String                @unique @default(cuid())
+  id               String    @id
+  webhookId        String    @unique @default(cuid())
   webhookSecret    String
   webhookExpiresAt DateTime?
-  createdAt        DateTime?             @default(now())
-  updatedAt        DateTime?             @updatedAt
-  YoutubeVideos    YoutubeVideo[]
-  Subscriptions    YoutubeSubscription[]
+
+  createdAt DateTime? @default(now())
+  updatedAt DateTime? @updatedAt
+
+  YoutubeVideos YoutubeVideo[]
+  Subscriptions YoutubeSubscription[]
 }
 
 model YoutubeVideo {
@@ -63,19 +81,21 @@ model YoutubeVideo {
 }
 
 model YoutubeSubscription {
-  id               BigInt  @id @default(autoincrement())
+  id               BigInt @id @default(autoincrement())
   youtubeChannelId String
   guildChannelId   String
+
   notifyPublish    Boolean
   notifySchedule   Boolean
   notifyReschedule Boolean
   notifyUpcoming   Boolean
   notifyLive       Boolean
-  publishText      String?
-  scheduleText     String?
-  rescheduleText   String?
-  upcomingText     String?
-  liveText         String?
+
+  publishText    String?
+  scheduleText   String?
+  rescheduleText String?
+  upcomingText   String?
+  liveText       String?
 
   createdAt DateTime? @default(now())
   updatedAt DateTime? @updatedAt
