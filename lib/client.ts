@@ -6,7 +6,8 @@ import {
 	EmbedBuilder,
 	ChatInputCommandInteraction,
 	StringSelectMenuBuilder,
-	ActionRowBuilder
+	ActionRowBuilder,
+	type BaseMessageOptions
 } from 'discord.js';
 import type { Context } from './ctx';
 import { kClient, kDb, kOptions } from './symbols';
@@ -15,6 +16,7 @@ import { lang } from './lang';
 import enHelp from './help/en.md.txt';
 import cnHelp from './help/zh-CN.md.txt';
 import twHelp from './help/zh-TW.md.txt';
+import type { PrismaClient, Guild as GuildRecord } from '@prisma/client';
 
 export type ValidChannelTypes =
 	| ChannelType.GuildText
@@ -100,7 +102,7 @@ const guildCommands = [
 		.setDescriptionLocalization('zh-TW', lang['zh-TW'].COMMAND.HELP.DESCRIPTION)
 ];
 
-async function getGuildId(ctx: Context, interaction: ChatInputCommandInteraction) {
+async function getGuildId(_: Context, interaction: ChatInputCommandInteraction) {
 	const guildId = interaction.guildId ?? interaction.guild?.id;
 	if (!guildId) {
 		await interaction.reply({
@@ -117,19 +119,40 @@ async function getGuildId(ctx: Context, interaction: ChatInputCommandInteraction
 	return guildId;
 }
 
+type MessageComponents = Exclude<BaseMessageOptions['components'], undefined>;
+
+function configComponents(locale: string, guildData: GuildRecord) {
+	const l = lang[locale];
+	const languages = Object.entries(lang).map(([lang, l]) => ({
+		value: lang,
+		label: l.LANG,
+		default: lang === (guildData.language ?? 'en')
+	}));
+	return [
+		new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
+			new StringSelectMenuBuilder()
+				.setCustomId('config:lang')
+				.setPlaceholder(l.HINT.SELECT_LANGUAGE)
+				.setMinValues(1)
+				.setMaxValues(1)
+				.addOptions(languages)
+		)
+	];
+}
+
 const commandHandlers: Record<string, (ctx: Context, interaction: ChatInputCommandInteraction) => Promise<unknown>> = {
 	async config(ctx, interaction) {
 		return getGuildId(ctx, interaction)
 			.then(async (guildId) => {
 				const db = ctx.get(kDb);
-				const guild = (await db.guild.findUnique({ where: { id: guildId } }))!;
+				const guildData = (await db.guild.findUnique({ where: { id: guildId } }))!;
 				const channel = interaction.options.getChannel<ValidChannelTypes>('channel', false);
-				const l = lang[guild.language ?? 'en'];
+				const l = lang[guildData.language ?? 'en'];
 				if (!channel) {
 					const languages = Object.entries(lang).map(([lang, l]) => ({
 						value: lang,
 						label: l.LANG,
-						default: lang === (guild.language ?? 'en')
+						default: lang === (guildData.language ?? 'en')
 					}));
 					await interaction.reply({
 						components: [
@@ -169,11 +192,16 @@ const commandHandlers: Record<string, (ctx: Context, interaction: ChatInputComma
 	}
 };
 
-async function syncCommands(guild: Guild) {
+async function syncCommands(db: PrismaClient, guild: Guild) {
 	return guild.commands
 		.set(guildCommands)
-		.then(() => {
+		.then(async () => {
 			console.log('[bot]', 'Application commands synced.', { guild: guild.id });
+			await db.guild.upsert({
+				where: { id: guild.id },
+				create: { id: guild.id },
+				update: {}
+			});
 		})
 		.catch((error) => {
 			console.log('[bot]', 'Unable to sync commands', {
@@ -202,12 +230,7 @@ export function setupClient(ctx: Context) {
 		}
 
 		for (const guild of client.guilds.cache.values()) {
-			await syncCommands(guild);
-			await db.guild.upsert({
-				where: { id: guild.id },
-				create: { id: guild.id },
-				update: {}
-			});
+			await syncCommands(db, guild);
 		}
 	});
 
@@ -218,7 +241,7 @@ export function setupClient(ctx: Context) {
 		}
 	});
 
-	client.on('guildCreate', syncCommands);
+	client.on('guildCreate', (g) => syncCommands(db, g));
 
 	return client.login(options.token);
 }
