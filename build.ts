@@ -52,7 +52,6 @@ for (const file of bundle.outputs) {
 	);
 }
 
-
 delete (pkg as any).devDependencies;
 pkg.module = 'index.js';
 
