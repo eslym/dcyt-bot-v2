@@ -1,0 +1,41 @@
+{
+	"ACTION": {
+		"ADD": "添加通知",
+		"REMOVE": "移除通知",
+		"TOGGLE": {
+			"LIVE": {
+				"DESCRIPTION": "當突發直播或首播時收到通知",
+				"TITLE": "突發通知"
+			},
+			"PUBLISH": {
+				"DESCRIPTION": "當有新影片時收到通知",
+				"TITLE": "新影片通知"
+			},
+			"RESCHEDULE": {
+				"DESCRIPTION": "當直播或首播改期時收到通知",
+				"TITLE": "改期通知"
+			},
+			"SCHEDULE": {
+				"DESCRIPTION": "當頻道安排了新的直播或者首播時收到通知",
+				"TITLE": "直播與首播通知"
+			},
+			"UPCOMING": {
+				"DESCRIPTION": "在直播或首播五分鐘前收到通知",
+				"TITLE": "開始前通知"
+			}
+		}
+	},
+	"LANG": "繁體中文",
+	"MESSAGE": {
+		"LIVE": "@here, {channel} 開始了一場{type}。",
+		"PUBLISH": "@here, {channel} 發佈了新影片。\n{url}",
+		"RESCHEDULE": "@here, {channel} 将{type}改期到 <t:{timestamp}:R>（<t:{timestamp}:F>）。\n{url}",
+		"SCHEDULE": "@here, {channel} 安排了一場{type}在 <t:{timestamp}:R>（<t:{timestamp}:F>）。\n{url}",
+		"UPCOMING": "@here, {channel} 的{type}快要開始了。\n{url}"
+	},
+	"TYPE": {
+		"LIVE": "直播",
+		"PREMIER": "首播",
+		"VIDEO": "影片"
+	}
+}

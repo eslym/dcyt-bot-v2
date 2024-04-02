@@ -1,0 +1,41 @@
+{
+	"ACTION": {
+		"ADD": "Add Notification",
+		"REMOVE": "Remove Notification",
+		"TOGGLE": {
+			"LIVE": {
+				"DESCRIPTION": "Notify when an unattended live/premier starts",
+				"TITLE": "Unattended Live"
+			},
+			"PUBLISH": {
+				"DESCRIPTION": "Notify when new video publish",
+				"TITLE": "Publish"
+			},
+			"RESCHEDULE": {
+				"DESCRIPTION": "Notify when a live/premier is rescheduled",
+				"TITLE": "Reschedule"
+			},
+			"SCHEDULE": {
+				"DESCRIPTION": "Notify when the channel schedule a new live/premier",
+				"TITLE": "Schedule"
+			},
+			"UPCOMING": {
+				"DESCRIPTION": "Notify when 5 minutes before live/premier starts",
+				"TITLE": "Upcoming"
+			}
+		}
+	},
+	"LANG": "English",
+	"MESSAGE": {
+		"LIVE": "@here, {channel} started a {type}.",
+		"PUBLISH": "@here, {channel} published a new video.\n{url}",
+		"RESCHEDULE": "@here, {channel} rescheduled a {type} to <t:{timestamp}:R> (<t:{timestamp}:F>).\n{url}",
+		"SCHEDULE": "@here, {channel} scheduled a new {type} at <t:{timestamp}:R> (<t:{timestamp}:F>).\n{url}",
+		"UPCOMING": "@here, {channel}'s {type} is about to start.\n{url}"
+	},
+	"TYPE": {
+		"LIVE": "live stream",
+		"PREMIER": "premier",
+		"VIDEO": "Video"
+	}
+}
