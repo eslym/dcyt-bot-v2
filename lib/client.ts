@@ -7,7 +7,9 @@ import {
 	ChatInputCommandInteraction,
 	StringSelectMenuBuilder,
 	ActionRowBuilder,
-	type BaseMessageOptions
+	type BaseMessageOptions,
+	type AnySelectMenuInteraction,
+	ButtonInteraction
 } from 'discord.js';
 import type { Context } from './ctx';
 import { kClient, kDb, kOptions } from './symbols';
@@ -103,7 +105,10 @@ const guildCommands = [
 		.setDescriptionLocalization('zh-TW', lang['zh-TW'].COMMAND.HELP.DESCRIPTION)
 ];
 
-async function getGuildId(_: Context, interaction: ChatInputCommandInteraction) {
+async function getGuildId(
+	_: Context,
+	interaction: ChatInputCommandInteraction | AnySelectMenuInteraction | ButtonInteraction
+) {
 	const guildId = interaction.guildId ?? interaction.guild?.id;
 	if (!guildId) {
 		await interaction.reply({
@@ -163,24 +168,9 @@ const commandHandlers: Record<string, (ctx: Context, interaction: ChatInputComma
 				const db = ctx.get(kDb);
 				const guildData = (await db.guild.findUnique({ where: { id: guildId } }))!;
 				const channel = interaction.options.getChannel<ValidChannelTypes>('channel', false);
-				const l = lang[guildData.language ?? 'en'];
 				if (!channel) {
-					const languages = Object.entries(lang).map(([lang, l]) => ({
-						value: lang,
-						label: l.LANG,
-						default: lang === (guildData.language ?? 'en')
-					}));
 					await interaction.reply({
-						components: [
-							new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
-								new StringSelectMenuBuilder()
-									.setCustomId('config:lang')
-									.setPlaceholder(l.HINT.SELECT_LANGUAGE)
-									.setMinValues(1)
-									.setMaxValues(1)
-									.addOptions(languages)
-							)
-						],
+						components: configComponents(guildData.language ?? 'en', guildData),
 						ephemeral: true
 					});
 					return;
@@ -254,6 +244,39 @@ export function setupClient(ctx: Context) {
 		if (interaction.isChatInputCommand()) {
 			await commandHandlers[interaction.commandName]?.(ctx, interaction);
 			return;
+		}
+		if (interaction.isStringSelectMenu()) {
+			if (interaction.customId === 'config:lang') {
+				return getGuildId(ctx, interaction)
+					.then(async (guildId) => {
+						const db = ctx.get(kDb);
+						const guildData = (await db.guild.findUnique({ where: { id: guildId } }))!;
+						guildData.language = interaction.values[0];
+						await db.guild.update({
+							where: { id: guildId },
+							data: { language: guildData.language }
+						});
+						await interaction.update({
+							components: configComponents(guildData.language, guildData)
+						});
+					})
+					.catch((err) => {
+						if (err === true) return;
+						console.error(err);
+					});
+			}
+			if (interaction.customId.startsWith('config:category')) {
+				return getGuildId(ctx, interaction)
+					.then(async (guildId) => {
+						const channelId = interaction.customId.substring('config:category'.length);
+						const db = ctx.get(kDb);
+						const guildData = (await db.guild.findUnique({ where: { id: guildId } }))!;
+					})
+					.catch((err) => {
+						if (err === true) return;
+						console.error(err);
+					});
+			}
 		}
 	});
 
