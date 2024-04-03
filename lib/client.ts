@@ -17,6 +17,7 @@ import enHelp from './help/en.md.txt';
 import cnHelp from './help/zh-CN.md.txt';
 import twHelp from './help/zh-TW.md.txt';
 import type { PrismaClient, Guild as GuildRecord } from '@prisma/client';
+import { NotificationType } from './enum';
 
 export type ValidChannelTypes =
 	| ChannelType.GuildText
@@ -121,13 +122,14 @@ async function getGuildId(_: Context, interaction: ChatInputCommandInteraction) 
 
 type MessageComponents = Exclude<BaseMessageOptions['components'], undefined>;
 
-function configComponents(locale: string, guildData: GuildRecord) {
+function configComponents(locale: string, guildData: GuildRecord): MessageComponents {
 	const l = lang[locale];
 	const languages = Object.entries(lang).map(([lang, l]) => ({
 		value: lang,
 		label: l.LANG,
 		default: lang === (guildData.language ?? 'en')
 	}));
+	const categories = Object.keys(NotificationType) as (keyof typeof NotificationType)[];
 	return [
 		new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
 			new StringSelectMenuBuilder()
@@ -136,6 +138,20 @@ function configComponents(locale: string, guildData: GuildRecord) {
 				.setMinValues(1)
 				.setMaxValues(1)
 				.addOptions(languages)
+		),
+		new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
+			new StringSelectMenuBuilder()
+				.setCustomId('config:category')
+				.setPlaceholder(l.HINT.SELECT_CATEGORY)
+				.setMinValues(1)
+				.setMaxValues(1)
+				.addOptions(
+					categories.map((category) => ({
+						value: category,
+						label: l.ACTION.TOGGLE[category].TITLE,
+						description: l.ACTION.TOGGLE[category].DESCRIPTION
+					}))
+				)
 		)
 	];
 }

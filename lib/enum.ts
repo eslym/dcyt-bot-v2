@@ -1,15 +1,15 @@
 export const VideoType = {
-	VIDEO: 'video',
-	LIVE: 'live',
-	PLAYLIST: 'playlist'
+	VIDEO: 'VIDEO',
+	LIVE: 'LIVE',
+	PLAYLIST: 'PLAYLIST'
 } as const;
 export type VideoType = (typeof VideoType)[keyof typeof VideoType];
 
 export const NotificationType = {
-	PUBLISH: 'publish',
-	SCHEDULE: 'schedule',
-	RESCHEDULE: 'reschedule',
-	UPCOMING: 'upcoming',
-	LIVE: 'live'
+	PUBLISH: 'PUBLISH',
+	SCHEDULE: 'SCHEDULE',
+	RESCHEDULE: 'RESCHEDULE',
+	UPCOMING: 'UPCOMING',
+	LIVE: 'LIVE'
 } as const;
 export type NotificationType = (typeof NotificationType)[keyof typeof NotificationType];
