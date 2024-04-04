@@ -38,6 +38,3 @@ export const ImportMarkdown: BunPlugin = {
 		});
 	}
 };
-
-Bun.plugin(UseBrowserAxios);
-Bun.plugin(ImportMarkdown);
