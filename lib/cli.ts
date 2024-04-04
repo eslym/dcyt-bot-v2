@@ -76,7 +76,7 @@ cli
 
 		client.on('ready', async () => {
 			if (client.application) {
-				client.application.commands.set([]);
+				await client.application.commands.set([]);
 			}
 			for (const guild of client.guilds.cache.values()) {
 				console.log('[bot]', 'Clearing commands', { guild: guild.id });

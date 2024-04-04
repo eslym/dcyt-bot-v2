@@ -6,13 +6,15 @@
 		"@eslym/youtube-utilities": "^1.0.13",
 		"@haverstack/axios-fetch-adapter": "^0.12.0",
 		"@types/bun": "latest",
+		"@types/mustache": "^4.2.5",
 		"@types/node-cron": "^3.0.11",
 		"axios": "^1.6.8",
 		"cac": "^6.7.14",
-		"prettier": "^3.2.5",
-		"zod": "^3.22.4",
 		"discord.js": "^14.14.1",
-		"node-cron": "^3.0.3"
+		"mustache": "^4.2.0",
+		"node-cron": "^3.0.3",
+		"prettier": "^3.2.5",
+		"zod": "^3.22.4"
 	},
 	"peerDependencies": {
 		"typescript": "^5.0.0"

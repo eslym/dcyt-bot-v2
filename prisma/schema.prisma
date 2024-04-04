@@ -51,6 +51,7 @@ model YoutubeChannel {
   webhookId        String    @unique @default(cuid())
   webhookSecret    String
   webhookExpiresAt DateTime?
+  webhookEnabled   Boolean   @default(false)
 
   createdAt DateTime? @default(now())
   updatedAt DateTime? @updatedAt

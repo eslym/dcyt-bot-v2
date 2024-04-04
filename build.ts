@@ -1,5 +1,5 @@
 import { chmodSync } from 'fs';
-import { UseBrowserAxios } from './lib/use-browser-axios';
+import { ImportMarkdown, UseBrowserAxios } from './lib/plugins';
 import pkg from './package.json';
 import { $ } from 'bun';
 
@@ -36,7 +36,7 @@ const bundle = await Bun.build({
 	naming: 'index.js',
 	target: 'bun',
 	minify: false,
-	plugins: [UseBrowserAxios],
+	plugins: [UseBrowserAxios, ImportMarkdown],
 	external: Object.keys(pkg.dependencies)
 });
 console.timeEnd('build bundle');

@@ -51,20 +51,26 @@
 			}
 		}
 	},
+	"ERROR": {
+		"INVALID_URL": "Invalid Youtube URL or handle",
+		"UNKNOWN": "Unknown error"
+	},
 	"HINT": {
 		"SELECT_CATEGORY": "Select a category to edit",
-		"SELECT_LANGUAGE": "Select a language"
+		"SELECT_LANGUAGE": "Select a language",
+		"SETTINGS_FOR": "Settings for {{channel}}"
 	},
 	"LABEL": {
-		"LANGUAGE": "Notification Language"
+		"LANGUAGE": "Notification Language",
+		"TEMPLATE": "Template Text"
 	},
 	"LANG": "English",
 	"NOTIFICATION": {
-		"LIVE": "@here, {channel} started a {type}.",
-		"PUBLISH": "@here, {channel} published a new video.\n{url}",
-		"RESCHEDULE": "@here, {channel} rescheduled a {type} to <t:{timestamp}:R> (<t:{timestamp}:F>).\n{url}",
-		"SCHEDULE": "@here, {channel} scheduled a new {type} at <t:{timestamp}:R> (<t:{timestamp}:F>).\n{url}",
-		"UPCOMING": "@here, {channel}'s {type} is about to start.\n{url}"
+		"LIVE": "@here, {{channel}} started a {{type}}.",
+		"PUBLISH": "@here, {{channel}} published a new video.\n{{url}}",
+		"RESCHEDULE": "@here, {{channel}} rescheduled a {{type}} to <t:{{timestamp}}:R> (<t:{{timestamp}}:F>).\n{{url}}",
+		"SCHEDULE": "@here, {{channel}} scheduled a new {{type}} at <t:{{timestamp}}:R> (<t:{{timestamp}}:F>).\n{{url}}",
+		"UPCOMING": "@here, {{channel}}'s {{type}} is about to start.\n{{url}}"
 	},
 	"TYPE": {
 		"LIVE": "live stream",
