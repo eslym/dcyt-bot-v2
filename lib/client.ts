@@ -14,24 +14,32 @@ import {
 	TextInputBuilder,
 	TextInputStyle,
 	type Snowflake,
-	ModalSubmitInteraction
+	ModalSubmitInteraction,
+	ButtonBuilder,
+	ButtonStyle,
+	StringSelectMenuInteraction,
+	ActivityType
 } from 'discord.js';
 import type { Context } from './ctx';
 import { kClient, kDb, kOptions } from './symbols';
 import { lang } from './lang';
-
 import enHelp from './help/en.md';
 import cnHelp from './help/zh-CN.md';
 import twHelp from './help/zh-TW.md';
-import type { PrismaClient } from '@prisma/client';
 import { NotificationType } from './enum';
 import Mustache from 'mustache';
-import { CrawlError, InvalidURLError, crawl } from '@eslym/youtube-utilities';
+import { cache } from './cache';
+import { CrawlError, InvalidURLError, fetchProfile, type ProfileCrawlResult } from './crawl';
+import type { YoutubeSubscription } from '@prisma/client';
 
 Mustache.escape = function escapeMarkdown(text) {
 	const markdownSpecialChars = /([\\`*_\[\]\-~])/g;
 	return text.replace(markdownSpecialChars, '\\$1');
 };
+
+function ucfirst(str: string) {
+	return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+}
 
 function escapeDiscordMarkdown(text: string) {
 	const markdownSpecialChars = /([\\`*_\[\]\-~<]|^[#>])/g;
@@ -184,6 +192,79 @@ function configComponents(locale: string, channelId?: string): MessageComponents
 	return components;
 }
 
+async function youtubeChannelInteraction(
+	interaction: ChatInputCommandInteraction | StringSelectMenuInteraction | ButtonInteraction,
+	videoData: ProfileCrawlResult,
+	sub: YoutubeSubscription | null | undefined,
+	targetChannel: string,
+	l: (typeof lang)[string]
+) {
+	try {
+		const rows = [
+			new ActionRowBuilder<ButtonBuilder>().addComponents(
+				new ButtonBuilder()
+					.setCustomId(`subscribe:${videoData.metadata.externalId}:${targetChannel}`)
+					.setLabel(sub ? l.ACTION.REMOVE : l.ACTION.ADD)
+					.setStyle(ButtonStyle.Primary)
+			)
+		] as MessageComponents;
+		if (sub) {
+			const categories = Object.keys(NotificationType) as (keyof typeof NotificationType)[];
+			rows.push(
+				new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
+					new StringSelectMenuBuilder()
+						.setCustomId(`notify:${videoData.metadata.externalId}:${targetChannel}`)
+						.setPlaceholder(l.HINT.SELECT_ENABLE)
+						.setMinValues(0)
+						.setMaxValues(categories.length)
+						.addOptions(
+							categories.map((category) => ({
+								value: category,
+								label: l.ACTION.TOGGLE[category].TITLE,
+								description: l.ACTION.TOGGLE[category].DESCRIPTION,
+								default: (sub as any)[`notify${ucfirst(category)}`]
+							}))
+						)
+				),
+				new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
+					new StringSelectMenuBuilder()
+						.setCustomId(`template:${videoData.metadata.externalId}:${targetChannel}`)
+						.setPlaceholder(l.HINT.SELECT_CATEGORY)
+						.setMinValues(1)
+						.setMaxValues(1)
+						.addOptions(
+							categories.map((category) => ({
+								value: category,
+								label: l.ACTION.TOGGLE[category].TITLE,
+								description: l.ACTION.TOGGLE[category].DESCRIPTION
+							}))
+						)
+				)
+			);
+		}
+		await interaction.editReply({
+			content: `<#${targetChannel}>`,
+			embeds: [
+				new EmbedBuilder()
+					.setTitle(videoData.metadata.title)
+					.setDescription(escapeDiscordMarkdown(videoData.metadata.description))
+					.setThumbnail(videoData.metadata.avatar.thumbnails[0].url)
+					.setURL(videoData.metadata.channelUrl)
+					.setColor('#00ff00')
+			],
+			components: rows
+		});
+	} catch (err) {
+		if (err instanceof InvalidURLError) {
+			await interaction.editReply({
+				embeds: [new EmbedBuilder().setTitle('Error').setDescription(l.ERROR.INVALID_URL).setColor('#ff0000')]
+			});
+			return;
+		}
+		throw err;
+	}
+}
+
 const commandHandlers: Record<string, (ctx: Context, interaction: ChatInputCommandInteraction) => Promise<unknown>> = {
 	async config(ctx, interaction) {
 		return getGuildId(ctx, interaction)
@@ -214,41 +295,28 @@ const commandHandlers: Record<string, (ctx: Context, interaction: ChatInputComma
 		return getGuildId(ctx, interaction)
 			.then(async (guildId) => {
 				let source = interaction.options.getString('channel', true);
-				interaction.deferReply({
+				await interaction.deferReply({
 					ephemeral: true
 				});
 				const guildData = (await ctx.get(kDb).guild.findUnique({ where: { id: guildId } }))!;
 				const l = lang[guildData.language ?? 'en'];
+				const targetChannel = interaction.options.getString('to', false) ?? interaction.channelId;
 				if (source.startsWith('@')) {
 					source = `https://youtube.com/${source}`;
 				}
-				try {
-					let result = await crawl(source);
-					if (result.type === 'video') {
-						result = await crawl(`https://youtube.com/channel/${result.details.channelId}`);
-					}
-					if (result.metadata.description.length > 200) {
-						result.metadata.description = result.metadata.description.slice(0, 200) + '...';
-					}
-					await interaction.editReply({
-						embeds: [
-							new EmbedBuilder()
-								.setTitle(result.metadata.title)
-								.setDescription(escapeDiscordMarkdown(result.metadata.description))
-								.setThumbnail(result.metadata.avatar.thumbnails[0].url)
-								.setURL(result.metadata.channelUrl)
-								.setColor('#00ff00')
-						]
-					});
-				} catch (err) {
-					if (err instanceof InvalidURLError) {
-						await interaction.editReply({
-							embeds: [new EmbedBuilder().setTitle('Error').setDescription(l.ERROR.INVALID_URL).setColor('#ff0000')]
-						});
-						return;
-					}
-					throw err;
+				const result = await cache.get(source, async () => await fetchProfile(source), 600000);
+				if (!cache.has(`https://youtube.com/channel/${result.metadata.externalId}`)) {
+					cache.set(`https://youtube.com/channel/${result.metadata.externalId}`, result, 600000);
 				}
+				const sub = await ctx.get(kDb).youtubeSubscription.findUnique({
+					where: {
+						id: {
+							guildChannelId: targetChannel,
+							youtubeChannelId: result.metadata.externalId
+						}
+					}
+				});
+				await youtubeChannelInteraction(interaction, result, sub, targetChannel, l);
 			})
 			.catch(async (err) => {
 				if (err === true) return;
@@ -297,7 +365,13 @@ export function setupClient(ctx: Context) {
 	const db = ctx.get(kDb);
 
 	client.on('ready', async () => {
-		if (client.user) console.log('[bot]', `Logged in as ${client.user.tag}`);
+		if (client.user) {
+			client.user.setActivity({
+				name: 'use /help',
+				type: ActivityType.Custom
+			});
+			console.log('[bot]', `Logged in as ${client.user.tag}`);
+		}
 
 		if (client.application) {
 			const url = new URL('https://discord.com/oauth2/authorize?scope=bot+applications.commands&permissions=149504');
@@ -441,6 +515,65 @@ export function setupClient(ctx: Context) {
 					console.error(err);
 				});
 		} else if (interaction.isButton()) {
+			if (interaction.customId.startsWith('subscribe:')) {
+				return getGuildId(ctx, interaction)
+					.then(async (guildId) => {
+						await interaction.deferUpdate();
+						const guildData = (await db.guild.findUnique({ where: { id: guildId } }))!;
+						const [source, targetChannel] = interaction.customId.substring('subscribe:'.length).split(':');
+						const result = await cache.get(
+							`https://youtube.com/channel/${source}`,
+							() => fetchProfile(`https://youtube.com/channel/${source}`),
+							600000
+						);
+						const deleted = await db.youtubeSubscription.deleteMany({
+							where: {
+								guildChannelId: targetChannel,
+								youtubeChannelId: result.metadata.externalId
+							}
+						});
+						if (deleted.count) {
+							return youtubeChannelInteraction(
+								interaction,
+								result,
+								null,
+								targetChannel,
+								lang[guildData.language ?? 'en']
+							);
+						}
+						await db.youtubeChannel.upsert({
+							where: {
+								id: source
+							},
+							create: {
+								id: source
+							},
+							update: {}
+						});
+						await db.guildChannel.upsert({
+							where: {
+								id: targetChannel,
+								guildId: guildId
+							},
+							create: {
+								id: targetChannel,
+								guildId: guildId
+							},
+							update: {}
+						});
+						const sub = await db.youtubeSubscription.create({
+							data: {
+								guildChannelId: targetChannel,
+								youtubeChannelId: result.metadata.externalId
+							}
+						});
+						await youtubeChannelInteraction(interaction, result, sub, targetChannel, lang[guildData.language ?? 'en']);
+					})
+					.catch((err) => {
+						if (err === true) return;
+						console.error(err);
+					});
+			}
 		}
 	});
 

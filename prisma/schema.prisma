@@ -49,9 +49,8 @@ model GuildChannel {
 model YoutubeChannel {
   id               String    @id
   webhookId        String    @unique @default(cuid())
-  webhookSecret    String
+  webhookSecret    String?
   webhookExpiresAt DateTime?
-  webhookEnabled   Boolean   @default(false)
 
   createdAt DateTime? @default(now())
   updatedAt DateTime? @updatedAt
@@ -82,15 +81,14 @@ model YoutubeVideo {
 }
 
 model YoutubeSubscription {
-  id               BigInt @id @default(autoincrement())
   youtubeChannelId String
   guildChannelId   String
 
-  notifyPublish    Boolean
-  notifySchedule   Boolean
-  notifyReschedule Boolean
-  notifyUpcoming   Boolean
-  notifyLive       Boolean
+  notifyPublish    Boolean @default(true)
+  notifySchedule   Boolean @default(true)
+  notifyReschedule Boolean @default(true)
+  notifyUpcoming   Boolean @default(true)
+  notifyLive       Boolean @default(true)
 
   publishText    String?
   scheduleText   String?
@@ -103,4 +101,6 @@ model YoutubeSubscription {
 
   YoutubeChannel YoutubeChannel @relation(fields: [youtubeChannelId], references: [id], onDelete: Cascade)
   GuildChannel   GuildChannel   @relation(fields: [guildChannelId], references: [id], onDelete: Cascade)
+
+  @@id(name: "id", [youtubeChannelId, guildChannelId])
 }

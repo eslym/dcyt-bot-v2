@@ -3,17 +3,17 @@
 	"module": "index.ts",
 	"type": "module",
 	"devDependencies": {
-		"@eslym/youtube-utilities": "^1.0.13",
 		"@haverstack/axios-fetch-adapter": "^0.12.0",
 		"@types/bun": "latest",
 		"@types/mustache": "^4.2.5",
 		"@types/node-cron": "^3.0.11",
-		"axios": "^1.6.8",
 		"cac": "^6.7.14",
 		"discord.js": "^14.14.1",
+		"json5": "^2.2.3",
 		"mustache": "^4.2.0",
 		"node-cron": "^3.0.3",
 		"prettier": "^3.2.5",
+		"xmlbuilder2": "^3.1.1",
 		"zod": "^3.22.4"
 	},
 	"peerDependencies": {
@@ -21,8 +21,6 @@
 	},
 	"dependencies": {
 		"@prisma/client": "^5.11.0",
-		"jsdom": "^21.0.0",
-		"prisma": "^5.11.0",
-		"xmlbuilder2": "^3.1.1"
+		"prisma": "^5.11.0"
 	}
 }

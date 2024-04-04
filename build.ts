@@ -35,7 +35,9 @@ const bundle = await Bun.build({
 	outdir,
 	naming: 'index.js',
 	target: 'bun',
-	minify: false,
+	minify: {
+		syntax: true
+	},
 	plugins: [UseBrowserAxios, ImportMarkdown],
 	external: Object.keys(pkg.dependencies)
 });

@@ -57,6 +57,7 @@
 	},
 	"HINT": {
 		"SELECT_CATEGORY": "选择一个项目进行编辑",
+		"SELECT_ENABLE": "选择需要通知的项目",
 		"SELECT_LANGUAGE": "选择一个语言",
 		"SETTINGS_FOR": "{{channel}} 的设定"
 	},
