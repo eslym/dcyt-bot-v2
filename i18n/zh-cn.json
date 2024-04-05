@@ -53,6 +53,7 @@
 	},
 	"ERROR": {
 		"INVALID_URL": "无效的Youtube链接或标识",
+		"NOT_FOUND": "无法找到对应的Youtube频道",
 		"UNKNOWN": "发生未知错误"
 	},
 	"HINT": {

@@ -71,8 +71,15 @@ export class InvalidURLError extends Error {
 }
 
 export class FetchError extends Error {
+	#status: number;
+
+	get status() {
+		return this.#status;
+	}
+
 	constructor(url: string, status: number) {
 		super(`Failed to fetch ${url}: ${status}`);
+		this.#status = status;
 	}
 }
 

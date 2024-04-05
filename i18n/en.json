@@ -53,6 +53,7 @@
 	},
 	"ERROR": {
 		"INVALID_URL": "Invalid Youtube URL or handle",
+		"NOT_FOUND": "Cannot find the given channel",
 		"UNKNOWN": "Unknown error"
 	},
 	"HINT": {

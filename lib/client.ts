@@ -30,7 +30,14 @@ import twHelp from './help/zh-TW.md';
 import { NotificationType } from './enum';
 import Mustache from 'mustache';
 import { cache } from './cache';
-import { CrawlError, InvalidURLError, fetchProfile, type ProfileCrawlResult, getChannelData } from './crawl';
+import {
+	CrawlError,
+	InvalidURLError,
+	fetchProfile,
+	type ProfileCrawlResult,
+	getChannelData,
+	FetchError
+} from './crawl';
 import type { PrismaClient, YoutubeSubscription } from '@prisma/client';
 import { ucfirst } from './utils';
 import { postWebsub } from './websub';
@@ -301,6 +308,15 @@ async function youtubeChannelInteraction(
 			});
 			return;
 		}
+		if (err instanceof FetchError && err.status === 404) {
+			await interaction.editReply({
+				embeds: [new EmbedBuilder().setTitle('Error').setDescription(l.ERROR.NOT_FOUND).setColor('#ff0000')]
+			});
+			return;
+		}
+		await interaction.editReply({
+			embeds: [new EmbedBuilder().setTitle('Error').setDescription(l.ERROR.UNKNOWN).setColor('#ff0000')]
+		});
 		throw err;
 	}
 }
