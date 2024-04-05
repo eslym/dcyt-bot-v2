@@ -56,7 +56,10 @@
 		"UNKNOWN": "Unknown error"
 	},
 	"HINT": {
+		"CHANNEL": "Channel: {{channel}}",
+		"NO_SUBSCRIPTIONS": "No notification enabled in {{channel}}",
 		"SELECT_CATEGORY": "Select a category to edit",
+		"SELECT_CHANNEL": "Select a Youtube channel to view",
 		"SELECT_ENABLE": "Select categories to enable notification",
 		"SELECT_LANGUAGE": "Select a language",
 		"SETTINGS_FOR": "Settings for {{channel}}"
@@ -75,7 +78,7 @@
 	},
 	"TYPE": {
 		"LIVE": "live stream",
-		"PREMIER": "premier",
+		"PREMIERE": "premiere",
 		"VIDEO": "Video"
 	}
 }

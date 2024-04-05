@@ -56,7 +56,10 @@
 		"UNKNOWN": "發生未知錯誤"
 	},
 	"HINT": {
+		"CHANNEL": "通知頻道：{{channel}}",
+		"NO_SUBSCRIPTIONS": "{{channel}} 并沒有開啓任何通知",
 		"SELECT_CATEGORY": "選擇一個項目進行編輯",
+		"SELECT_CHANNEL": "選擇一個 Youtube 頻道來預覽",
 		"SELECT_ENABLE": "選擇需要通知的項目",
 		"SELECT_LANGUAGE": "選擇一個語言",
 		"SETTINGS_FOR": "{{channel}} 的設定"
@@ -75,7 +78,7 @@
 	},
 	"TYPE": {
 		"LIVE": "直播",
-		"PREMIER": "首播",
+		"PREMIERE": "首播",
 		"VIDEO": "影片"
 	}
 }

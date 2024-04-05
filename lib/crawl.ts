@@ -1,4 +1,5 @@
 import JSON5 from 'json5';
+import { cache } from './cache';
 
 export interface Thumbnail {
 	url: string;
@@ -308,4 +309,40 @@ export async function fetchVideo(url: string) {
 	}
 
 	return extractVideo(res.scripts);
+}
+
+export async function getChannelData(urlOrHandle: string) {
+	const ttl = 15 * 60 * 1000;
+	if (urlOrHandle.startsWith('@')) {
+		urlOrHandle = `https://youtube.com/${urlOrHandle}`;
+	}
+	const result = await cache.get(
+		urlOrHandle,
+		async () => {
+			const res = await fetchProfile(urlOrHandle);
+			if (res.metadata.description.length > 500) {
+				res.metadata.description = res.metadata.description.slice(0, 500) + '...';
+			}
+			return res;
+		},
+		ttl
+	);
+	if (!cache.has(`https://youtube.com/channel/${result.metadata.externalId}`)) {
+		cache.set(`https://youtube.com/channel/${result.metadata.externalId}`, result, ttl);
+	}
+	if (!cache.has(result.metadata.channelUrl)) {
+		cache.set(result.metadata.channelUrl, result, ttl);
+	}
+	return result;
+}
+
+export async function getVideoData(id: string, cached: boolean = true) {
+	const ttl = 60 * 1000;
+	const url = `https://www.youtube.com/watch?v=${id}`;
+	if (cached) {
+		return await cache.get(url, () => fetchVideo(url), ttl);
+	}
+	const result = await fetchVideo(url);
+	cache.set(url, result, ttl);
+	return result;
 }

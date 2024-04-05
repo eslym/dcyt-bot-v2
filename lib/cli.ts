@@ -9,6 +9,8 @@ import axios from 'axios';
 import fetchAdapter from '@haverstack/axios-fetch-adapter';
 import { startOptions } from './schema';
 import { setupClient } from './client';
+import { handleWebSub } from './websub';
+import { cache } from './cache';
 
 axios.defaults.adapter = fetchAdapter;
 
@@ -45,7 +47,9 @@ cli
 			Bun.serve({
 				hostname: opts.data.host,
 				port: opts.data.port,
-				fetch(request) {
+				async fetch(request) {
+					const result = await handleWebSub(ctx, request);
+					if (result) return result;
 					if (request.method === 'HEAD' || request.method === 'GET') {
 						return new Response('404 Not Found', { status: 404, headers: { 'Content-Type': 'text/plain' } });
 					}
@@ -53,6 +57,8 @@ cli
 				}
 			})
 		);
+
+		setInterval(() => cache.invalidate(), 15000);
 
 		const cleanup = async () => {
 			console.log('Program shutting down');

@@ -18,7 +18,8 @@ import {
 	ButtonBuilder,
 	ButtonStyle,
 	StringSelectMenuInteraction,
-	ActivityType
+	ActivityType,
+	type ModalMessageModalSubmitInteraction
 } from 'discord.js';
 import type { Context } from './ctx';
 import { kClient, kDb, kOptions } from './symbols';
@@ -29,17 +30,15 @@ import twHelp from './help/zh-TW.md';
 import { NotificationType } from './enum';
 import Mustache from 'mustache';
 import { cache } from './cache';
-import { CrawlError, InvalidURLError, fetchProfile, type ProfileCrawlResult } from './crawl';
-import type { YoutubeSubscription } from '@prisma/client';
+import { CrawlError, InvalidURLError, fetchProfile, type ProfileCrawlResult, getChannelData } from './crawl';
+import type { PrismaClient, YoutubeSubscription } from '@prisma/client';
+import { ucfirst } from './utils';
+import { postWebsub } from './websub';
 
 Mustache.escape = function escapeMarkdown(text) {
 	const markdownSpecialChars = /([\\`*_\[\]\-~])/g;
 	return text.replace(markdownSpecialChars, '\\$1');
 };
-
-function ucfirst(str: string) {
-	return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
-}
 
 function escapeDiscordMarkdown(text: string) {
 	const markdownSpecialChars = /([\\`*_\[\]\-~<]|^[#>])/g;
@@ -131,6 +130,41 @@ const guildCommands = [
 		.setDescriptionLocalization('zh-TW', lang['zh-TW'].COMMAND.HELP.DESCRIPTION)
 ];
 
+const env = process.env;
+
+async function checkSubs(ctx: Context, channel: string) {
+	if (env.DEV_WEBSUB_DISABLED === 'true') return;
+	const db = ctx.get(kDb);
+	const opts = ctx.get(kOptions);
+	const ch = await db.youtubeChannel.findUnique({
+		where: { id: channel },
+		include: {
+			_count: {
+				select: {
+					Subscriptions: true
+				}
+			}
+		}
+	});
+	if (!ch) return;
+	if (ch._count.Subscriptions && !ch.webhookSecret) {
+		const secret = Buffer.from(channel).toString('base64');
+		await db.youtubeChannel.update({
+			where: { id: channel },
+			data: {
+				webhookSecret: secret
+			}
+		});
+		const callback = new URL(`./websub/${ch.webhookId}`, opts.websub);
+		await postWebsub('subscribe', channel, secret, callback.toString());
+		return;
+	}
+	if (!ch._count.Subscriptions && ch.webhookSecret) {
+		const callback = new URL(`./websub/${ch.webhookId}`, opts.websub);
+		await postWebsub('unsubscribe', channel, ch.webhookSecret, callback.toString());
+	}
+}
+
 async function getGuildId(
 	_: Context,
 	interaction: ChatInputCommandInteraction | AnySelectMenuInteraction | ButtonInteraction | ModalSubmitInteraction
@@ -193,7 +227,11 @@ function configComponents(locale: string, channelId?: string): MessageComponents
 }
 
 async function youtubeChannelInteraction(
-	interaction: ChatInputCommandInteraction | StringSelectMenuInteraction | ButtonInteraction,
+	interaction:
+		| ChatInputCommandInteraction
+		| StringSelectMenuInteraction
+		| ButtonInteraction
+		| ModalMessageModalSubmitInteraction,
 	videoData: ProfileCrawlResult,
 	sub: YoutubeSubscription | null | undefined,
 	targetChannel: string,
@@ -205,7 +243,8 @@ async function youtubeChannelInteraction(
 				new ButtonBuilder()
 					.setCustomId(`subscribe:${videoData.metadata.externalId}:${targetChannel}`)
 					.setLabel(sub ? l.ACTION.REMOVE : l.ACTION.ADD)
-					.setStyle(ButtonStyle.Primary)
+					.setStyle(sub ? ButtonStyle.Secondary : ButtonStyle.Success)
+					.setEmoji(sub ? '❌' : '➕')
 			)
 		] as MessageComponents;
 		if (sub) {
@@ -243,7 +282,7 @@ async function youtubeChannelInteraction(
 			);
 		}
 		await interaction.editReply({
-			content: `<#${targetChannel}>`,
+			content: Mustache.render(l.HINT.CHANNEL, { channel: `<#${targetChannel}>` }),
 			embeds: [
 				new EmbedBuilder()
 					.setTitle(videoData.metadata.title)
@@ -263,6 +302,75 @@ async function youtubeChannelInteraction(
 		}
 		throw err;
 	}
+}
+
+async function listSubscriptionInteraction(
+	db: PrismaClient,
+	interaction: ChatInputCommandInteraction | ButtonInteraction,
+	l: (typeof lang)[string],
+	dcCh: string,
+	page: number = 1
+) {
+	const total = await db.youtubeSubscription.count({
+		where: {
+			guildChannelId: dcCh
+		}
+	});
+	if (interaction.isChatInputCommand()) {
+		await interaction.deferReply({
+			ephemeral: true
+		});
+	} else {
+		await interaction.deferUpdate();
+	}
+	if (total === 0) {
+		await interaction.editReply({
+			content: Mustache.render(l.HINT.NO_SUBSCRIPTIONS, { channel: `<#${dcCh}>` })
+		});
+		return;
+	}
+	const subscriptions = await db.youtubeSubscription.findMany({
+		where: {
+			guildChannelId: dcCh
+		},
+		skip: (page - 1) * 5
+	});
+	const menu = new StringSelectMenuBuilder()
+		.setCustomId(`list:${dcCh}:${page}`)
+		.setPlaceholder(l.HINT.SELECT_CHANNEL)
+		.setMinValues(1)
+		.setMaxValues(1);
+
+	for (const sub of subscriptions) {
+		const chData = await getChannelData(`https://youtube.com/channel/${sub.youtubeChannelId}`);
+		menu.addOptions({
+			value: sub.youtubeChannelId,
+			label: chData.metadata.title,
+			description: chData.metadata.description.substring(0, 50)
+		});
+	}
+
+	const prev = new ButtonBuilder()
+		.setCustomId(`list:${dcCh}:${page - 1}`)
+		.setLabel(l.ACTION.PREVIOUS)
+		.setStyle(ButtonStyle.Secondary)
+		.setDisabled(page <= 1);
+
+	const next = new ButtonBuilder()
+		.setCustomId(`list:${dcCh}:${page + 1}`)
+		.setLabel(l.ACTION.NEXT)
+		.setStyle(ButtonStyle.Secondary)
+		.setDisabled(page * 5 >= total);
+
+	await interaction.editReply({
+		content: Mustache.render(l.HINT.CHANNEL, { channel: `<#${dcCh}>` }),
+		components: subscriptions.length
+			? [
+					new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(menu),
+					new ActionRowBuilder<ButtonBuilder>().addComponents(prev, next)
+				]
+			: [new ActionRowBuilder<ButtonBuilder>().addComponents(prev, next)]
+	});
 }
 
 const commandHandlers: Record<string, (ctx: Context, interaction: ChatInputCommandInteraction) => Promise<unknown>> = {
@@ -301,13 +409,7 @@ const commandHandlers: Record<string, (ctx: Context, interaction: ChatInputComma
 				const guildData = (await ctx.get(kDb).guild.findUnique({ where: { id: guildId } }))!;
 				const l = lang[guildData.language ?? 'en'];
 				const targetChannel = interaction.options.getString('to', false) ?? interaction.channelId;
-				if (source.startsWith('@')) {
-					source = `https://youtube.com/${source}`;
-				}
-				const result = await cache.get(source, async () => await fetchProfile(source), 600000);
-				if (!cache.has(`https://youtube.com/channel/${result.metadata.externalId}`)) {
-					cache.set(`https://youtube.com/channel/${result.metadata.externalId}`, result, 600000);
-				}
+				const result = await getChannelData(source);
 				const sub = await ctx.get(kDb).youtubeSubscription.findUnique({
 					where: {
 						id: {
@@ -328,6 +430,19 @@ const commandHandlers: Record<string, (ctx: Context, interaction: ChatInputComma
 				console.error(err);
 			});
 	},
+	async list(ctx, interaction) {
+		return getGuildId(ctx, interaction)
+			.then(async (guildId) => {
+				const ch = interaction.options.getChannel<ValidChannelTypes>('channel', false);
+				const guildData = (await ctx.get(kDb).guild.findUnique({ where: { id: guildId } }))!;
+				const l = lang[guildData.language ?? 'en'];
+				await listSubscriptionInteraction(ctx.get(kDb), interaction, l, ch?.id ?? interaction.channelId);
+			})
+			.catch((err) => {
+				if (err === true) return;
+				console.error(err);
+			});
+	},
 	async help(ctx, interaction) {
 		return getGuildId(ctx, interaction)
 			.then(async (guildId) => {
@@ -337,6 +452,354 @@ const commandHandlers: Record<string, (ctx: Context, interaction: ChatInputComma
 					content: helpText[guild.language ?? 'en'],
 					ephemeral: true
 				});
+			})
+			.catch((err) => {
+				if (err === true) return;
+				console.error(err);
+			});
+	}
+};
+
+const selectMenuHandlers: Record<string, (ctx: Context, interaction: StringSelectMenuInteraction) => Promise<unknown>> =
+	{
+		async configLang(ctx, interaction) {
+			const db = ctx.get(kDb);
+			return getGuildId(ctx, interaction)
+				.then(async (guildId) => {
+					const guildData = (await db.guild.findUnique({ where: { id: guildId } }))!;
+					guildData.language = interaction.values[0];
+					await db.guild.update({
+						where: { id: guildId },
+						data: { language: guildData.language }
+					});
+					await interaction.update({
+						components: configComponents(guildData.language)
+					});
+				})
+				.catch((err) => {
+					if (err === true) return;
+					console.error(err);
+				});
+		},
+		async configCategory(ctx, interaction) {
+			const db = ctx.get(kDb);
+			return getGuildId(ctx, interaction)
+				.then(async (guildId) => {
+					const channelId = interaction.customId.substring('config:category'.length + 1);
+					const guildData = (await db.guild.findUnique({ where: { id: guildId } }))!;
+					const category = interaction.values[0];
+					const l = lang[guildData.language ?? 'en'];
+					let template: string;
+					let placeholder = (l.NOTIFICATION as any)[category];
+					if (channelId) {
+						const channelData = await db.guildChannel.findUnique({
+							where: {
+								id: channelId,
+								guildId: guildId
+							}
+						});
+						template = ((channelData as any)[`${category.toLowerCase()}Text`] as string) ?? '';
+						placeholder = ((guildData as any)[`${category.toLowerCase()}Text`] as string) ?? placeholder;
+					} else {
+						template = ((guildData as any)[`${category.toLowerCase()}Text`] as string) ?? '';
+					}
+					await interaction.showModal(
+						new ModalBuilder()
+							.setTitle((l.ACTION.TOGGLE as any)[category].TITLE)
+							.setCustomId(channelId ? `config:${category}:${channelId}` : `config:${category}`)
+							.addComponents(
+								new ActionRowBuilder<TextInputBuilder>().addComponents(
+									new TextInputBuilder()
+										.setLabel(l.LABEL.TEMPLATE)
+										.setStyle(TextInputStyle.Paragraph)
+										.setCustomId(`template`)
+										.setPlaceholder(placeholder)
+										.setMinLength(0)
+										.setMaxLength(1000)
+										.setValue(template)
+										.setRequired(false)
+								)
+							)
+					);
+				})
+				.catch((err) => {
+					if (err === true) return;
+					console.error(err);
+				});
+		},
+		async notify(ctx, interaction) {
+			const db = ctx.get(kDb);
+			const [source, targetChannel] = interaction.customId.substring('notify:'.length).split(':');
+			return getGuildId(ctx, interaction)
+				.then(async (guildId) => {
+					const guildData = (await db.guild.findUnique({ where: { id: guildId } }))!;
+					const sub = await db.youtubeSubscription.findUnique({
+						where: {
+							id: {
+								guildChannelId: targetChannel,
+								youtubeChannelId: source
+							}
+						}
+					});
+					if (!sub) return;
+					interaction.deferUpdate();
+					const update: any = {};
+					for (const category of Object.values(NotificationType)) {
+						update[`notify${ucfirst(category)}`] = interaction.values.includes(category);
+					}
+					await db.youtubeSubscription.update({
+						where: {
+							id: {
+								guildChannelId: targetChannel,
+								youtubeChannelId: source
+							}
+						},
+						data: update
+					});
+					const result = await cache.get(
+						`https://youtube.com/channel/${source}`,
+						() => fetchProfile(`https://youtube.com/channel/${source}`),
+						600000
+					);
+					await youtubeChannelInteraction(interaction, result, sub, targetChannel, lang[guildData.language ?? 'en']);
+				})
+				.catch((err) => {
+					if (err === true) return;
+					console.error(err);
+				});
+		},
+		async template(ctx, interaction) {
+			const db = ctx.get(kDb);
+			const [source, targetChannel] = interaction.customId.substring('template:'.length).split(':');
+			return getGuildId(ctx, interaction)
+				.then(async (guildId) => {
+					const guildData = (await db.guild.findUnique({ where: { id: guildId } }))!;
+					const sub = await db.youtubeSubscription.findUnique({
+						where: {
+							id: {
+								guildChannelId: targetChannel,
+								youtubeChannelId: source
+							}
+						},
+						include: {
+							GuildChannel: true
+						}
+					});
+					if (!sub) return;
+					const category = interaction.values[0];
+					const l = lang[guildData.language ?? 'en'];
+					await interaction.showModal(
+						new ModalBuilder()
+							.setTitle((l.ACTION.TOGGLE as any)[category].TITLE)
+							.setCustomId(`template:${source}:${targetChannel}:${category}`)
+							.addComponents(
+								new ActionRowBuilder<TextInputBuilder>().addComponents(
+									new TextInputBuilder()
+										.setLabel(l.LABEL.TEMPLATE)
+										.setStyle(TextInputStyle.Paragraph)
+										.setCustomId(`template`)
+										.setPlaceholder(
+											(sub.GuildChannel as any)[`${category.toLowerCase()}Text`] ?? (l.NOTIFICATION as any)[category]
+										)
+										.setMinLength(0)
+										.setMaxLength(1000)
+										.setValue((sub as any)[`${category.toLowerCase()}Text`] ?? '')
+										.setRequired(false)
+								)
+							)
+					);
+				})
+				.catch((err) => {
+					if (err === true) return;
+					console.error(err);
+				});
+		},
+		async list(ctx, interaction) {
+			return getGuildId(ctx, interaction)
+				.then(async (guildId) => {
+					const [dcCh] = interaction.customId.substring('list:'.length).split(':') as [string, string];
+					const ytCh = interaction.values[0];
+					const db = ctx.get(kDb);
+					const guildData = (await ctx.get(kDb).guild.findUnique({ where: { id: guildId } }))!;
+					const l = lang[guildData.language ?? 'en'];
+					const sub = await db.youtubeSubscription.findUnique({
+						where: {
+							id: {
+								guildChannelId: dcCh,
+								youtubeChannelId: ytCh
+							}
+						}
+					});
+					await interaction.deferReply({
+						ephemeral: true
+					});
+					const result = await cache.get(
+						`https://youtube.com/channel/${ytCh}`,
+						() => fetchProfile(`https://youtube.com/channel/${ytCh}`),
+						600000
+					);
+					await youtubeChannelInteraction(interaction, result, sub, dcCh, l);
+				})
+				.catch((err) => {
+					if (err === true) return;
+					console.error(err);
+				});
+		}
+	};
+
+const modalHandlers: Record<string, (ctx: Context, interaction: ModalSubmitInteraction) => Promise<unknown>> = {
+	async config(ctx, interaction) {
+		const db = ctx.get(kDb);
+		const [category, channelId] = interaction.customId.substring('config:'.length).split(':') as [
+			NotificationType,
+			Snowflake | undefined
+		];
+		return getGuildId(ctx, interaction)
+			.then(async (guildId) => {
+				const guildData = (await db.guild.findUnique({ where: { id: guildId } }))!;
+				const value = interaction.fields.getTextInputValue('template') || null;
+				if (channelId) {
+					await db.guildChannel.upsert({
+						where: {
+							id: channelId,
+							guildId: guildId
+						},
+						create: {
+							id: channelId,
+							guildId: guildId,
+							[`${category.toLowerCase()}Text`]: value
+						},
+						update: {
+							[`${category.toLowerCase()}Text`]: value
+						}
+					});
+				} else {
+					(guildData as any)[`${category.toLowerCase()}Text`] = value;
+					await db.guild.update({
+						where: { id: guildId },
+						data: guildData
+					});
+				}
+				if (interaction.isFromMessage()) {
+					await interaction.update({
+						components: configComponents(guildData.language ?? 'en', channelId)
+					});
+				}
+			})
+			.catch((err) => {
+				if (err === true) return;
+				console.error(err);
+			});
+	},
+	async template(ctx, interaction) {
+		const db = ctx.get(kDb);
+		const [source, targetChannel, category] = interaction.customId.substring('template:'.length).split(':') as [
+			string,
+			string,
+			NotificationType
+		];
+		return getGuildId(ctx, interaction)
+			.then(async (guildId) => {
+				const guildData = (await db.guild.findUnique({ where: { id: guildId } }))!;
+				const value = interaction.fields.getTextInputValue('template') || null;
+				const sub = await db.youtubeSubscription.findUnique({
+					where: {
+						id: {
+							guildChannelId: targetChannel,
+							youtubeChannelId: source
+						}
+					}
+				});
+				if (!sub) return;
+				await db.youtubeSubscription.update({
+					where: {
+						id: {
+							guildChannelId: targetChannel,
+							youtubeChannelId: source
+						}
+					},
+					data: {
+						[`${category.toLowerCase()}Text`]: value
+					}
+				});
+				if (interaction.isFromMessage()) {
+					interaction.deferUpdate();
+					const result = await cache.get(
+						`https://youtube.com/channel/${source}`,
+						() => fetchProfile(`https://youtube.com/channel/${source}`),
+						600000
+					);
+					await youtubeChannelInteraction(interaction, result, sub, targetChannel, lang[guildData.language ?? 'en']);
+				}
+			})
+			.catch((err) => {
+				if (err === true) return;
+				console.error(err);
+			});
+	}
+};
+
+const buttonHandlers: Record<string, (ctx: Context, interaction: ButtonInteraction) => Promise<unknown> | void> = {
+	async subscribe(ctx, interaction) {
+		const db = ctx.get(kDb);
+		return getGuildId(ctx, interaction)
+			.then(async (guildId) => {
+				await interaction.deferUpdate();
+				const guildData = (await db.guild.findUnique({ where: { id: guildId } }))!;
+				const [source, targetChannel] = interaction.customId.substring('subscribe:'.length).split(':');
+				const result = await getChannelData(`https://youtube.com/channel/${source}`);
+				const deleted = await db.youtubeSubscription.deleteMany({
+					where: {
+						guildChannelId: targetChannel,
+						youtubeChannelId: result.metadata.externalId
+					}
+				});
+				if (deleted.count) {
+					queueMicrotask(() => checkSubs(ctx, source).catch(console.error));
+					return youtubeChannelInteraction(interaction, result, null, targetChannel, lang[guildData.language ?? 'en']);
+				}
+				await db.youtubeChannel.upsert({
+					where: {
+						id: source
+					},
+					create: {
+						id: source
+					},
+					update: {}
+				});
+				await db.guildChannel.upsert({
+					where: {
+						id: targetChannel,
+						guildId: guildId
+					},
+					create: {
+						id: targetChannel,
+						guildId: guildId
+					},
+					update: {}
+				});
+				const sub = await db.youtubeSubscription.create({
+					data: {
+						guildChannelId: targetChannel,
+						youtubeChannelId: result.metadata.externalId
+					}
+				});
+				queueMicrotask(() => checkSubs(ctx, source).catch(console.error));
+				await youtubeChannelInteraction(interaction, result, sub, targetChannel, lang[guildData.language ?? 'en']);
+			})
+			.catch((err) => {
+				if (err === true) return;
+				console.error(err);
+			});
+	},
+	async list(ctx, interaction) {
+		const db = ctx.get(kDb);
+		const [dcCh, page] = interaction.customId.substring('list:'.length).split(':');
+		return getGuildId(ctx, interaction)
+			.then(async (guildId) => {
+				const guildData = (await db.guild.findUnique({ where: { id: guildId } }))!;
+				const l = lang[guildData.language ?? 'en'];
+				await listSubscriptionInteraction(db, interaction, l, dcCh, parseInt(page));
 			})
 			.catch((err) => {
 				if (err === true) return;
@@ -410,212 +873,38 @@ export function setupClient(ctx: Context) {
 		}
 		if (interaction.isStringSelectMenu()) {
 			if (interaction.customId === 'config:lang') {
-				return getGuildId(ctx, interaction)
-					.then(async (guildId) => {
-						const db = ctx.get(kDb);
-						const guildData = (await db.guild.findUnique({ where: { id: guildId } }))!;
-						guildData.language = interaction.values[0];
-						await db.guild.update({
-							where: { id: guildId },
-							data: { language: guildData.language }
-						});
-						await interaction.update({
-							components: configComponents(guildData.language)
-						});
-					})
-					.catch((err) => {
-						if (err === true) return;
-						console.error(err);
-					});
-			} else if (interaction.customId.startsWith('config:category')) {
-				return getGuildId(ctx, interaction)
-					.then(async (guildId) => {
-						const channelId = interaction.customId.substring('config:category'.length + 1);
-						const db = ctx.get(kDb);
-						const guildData = (await db.guild.findUnique({ where: { id: guildId } }))!;
-						const category = interaction.values[0];
-						const l = lang[guildData.language ?? 'en'];
-						let template: string;
-						let placeholder = (l.NOTIFICATION as any)[category];
-						if (channelId) {
-							const channelData = await db.guildChannel.findUnique({
-								where: {
-									id: channelId,
-									guildId: guildId
-								}
-							});
-							template = ((channelData as any)[`${category.toLowerCase()}Text`] as string) ?? '';
-							placeholder = ((guildData as any)[`${category.toLowerCase()}Text`] as string) ?? placeholder;
-						} else {
-							template = ((guildData as any)[`${category.toLowerCase()}Text`] as string) ?? '';
-						}
-						await interaction.showModal(
-							new ModalBuilder()
-								.setTitle((l.ACTION.TOGGLE as any)[category].TITLE)
-								.setCustomId(channelId ? `config:${category}:${channelId}` : `config:${category}`)
-								.addComponents(
-									new ActionRowBuilder<TextInputBuilder>().addComponents(
-										new TextInputBuilder()
-											.setLabel(l.LABEL.TEMPLATE)
-											.setStyle(TextInputStyle.Paragraph)
-											.setCustomId(`template`)
-											.setPlaceholder(placeholder)
-											.setMinLength(0)
-											.setMaxLength(1000)
-											.setValue(template)
-											.setRequired(false)
-									)
-								)
-						);
-					})
-					.catch((err) => {
-						if (err === true) return;
-						console.error(err);
-					});
-			} else if (interaction.customId.startsWith('notify:')) {
-				const [source, targetChannel] = interaction.customId.substring('notify:'.length).split(':');
-				return getGuildId(ctx, interaction)
-					.then(async (guildId) => {
-						const db = ctx.get(kDb);
-						const guildData = (await db.guild.findUnique({ where: { id: guildId } }))!;
-						const sub = await db.youtubeSubscription.findUnique({
-							where: {
-								id: {
-									guildChannelId: targetChannel,
-									youtubeChannelId: source
-								}
-							}
-						});
-						if (!sub) return;
-						interaction.deferUpdate();
-						const update: any = {};
-						for (const category of Object.values(NotificationType)) {
-							update[`notify${ucfirst(category)}`] = interaction.values.includes(category);
-						}
-						await db.youtubeSubscription.update({
-							where: {
-								id: {
-									guildChannelId: targetChannel,
-									youtubeChannelId: source
-								}
-							},
-							data: update
-						});
-						const result = await cache.get(
-							`https://youtube.com/channel/${source}`,
-							() => fetchProfile(`https://youtube.com/channel/${source}`),
-							600000
-						);
-						await youtubeChannelInteraction(interaction, result, sub, targetChannel, lang[guildData.language ?? 'en']);
-					})
-					.catch((err) => {
-						if (err === true) return;
-						console.error(err);
-					});
+				await selectMenuHandlers.configLang(ctx, interaction);
+				return;
+			}
+			if (interaction.customId.startsWith('config:category')) {
+				await selectMenuHandlers.configCategory(ctx, interaction);
+				return;
+			}
+			if (interaction.customId.startsWith('notify:')) {
+				await selectMenuHandlers.notify(ctx, interaction);
+				return;
+			}
+			if (interaction.customId.startsWith('template:')) {
+				await selectMenuHandlers.template(ctx, interaction);
+				return;
+			}
+			if (interaction.customId.startsWith('list:')) {
+				await selectMenuHandlers.list(ctx, interaction);
+				return;
 			}
 		} else if (interaction.isModalSubmit()) {
 			if (interaction.customId.startsWith('config:')) {
-				const [category, channelId] = interaction.customId.substring('config:'.length).split(':') as [
-					NotificationType,
-					Snowflake | undefined
-				];
-				return getGuildId(ctx, interaction)
-					.then(async (guildId) => {
-						const db = ctx.get(kDb);
-						const guildData = (await db.guild.findUnique({ where: { id: guildId } }))!;
-						const value = interaction.fields.getTextInputValue('template') || null;
-						if (channelId) {
-							await db.guildChannel.upsert({
-								where: {
-									id: channelId,
-									guildId: guildId
-								},
-								create: {
-									id: channelId,
-									guildId: guildId,
-									[`${category.toLowerCase()}Text`]: value
-								},
-								update: {
-									[`${category.toLowerCase()}Text`]: value
-								}
-							});
-						} else {
-							(guildData as any)[`${category.toLowerCase()}Text`] = value;
-							await db.guild.update({
-								where: { id: guildId },
-								data: guildData
-							});
-						}
-						if (interaction.isFromMessage()) {
-							await interaction.update({
-								components: configComponents(guildData.language ?? 'en', channelId)
-							});
-						}
-					})
-					.catch((err) => {
-						if (err === true) return;
-						console.error(err);
-					});
+				await modalHandlers.config(ctx, interaction);
+				return;
+			}
+			if (interaction.customId.startsWith('template:')) {
+				await modalHandlers.template(ctx, interaction);
+				return;
 			}
 		} else if (interaction.isButton()) {
 			if (interaction.customId.startsWith('subscribe:')) {
-				return getGuildId(ctx, interaction)
-					.then(async (guildId) => {
-						await interaction.deferUpdate();
-						const guildData = (await db.guild.findUnique({ where: { id: guildId } }))!;
-						const [source, targetChannel] = interaction.customId.substring('subscribe:'.length).split(':');
-						const result = await cache.get(
-							`https://youtube.com/channel/${source}`,
-							() => fetchProfile(`https://youtube.com/channel/${source}`),
-							600000
-						);
-						const deleted = await db.youtubeSubscription.deleteMany({
-							where: {
-								guildChannelId: targetChannel,
-								youtubeChannelId: result.metadata.externalId
-							}
-						});
-						if (deleted.count) {
-							return youtubeChannelInteraction(
-								interaction,
-								result,
-								null,
-								targetChannel,
-								lang[guildData.language ?? 'en']
-							);
-						}
-						await db.youtubeChannel.upsert({
-							where: {
-								id: source
-							},
-							create: {
-								id: source
-							},
-							update: {}
-						});
-						await db.guildChannel.upsert({
-							where: {
-								id: targetChannel,
-								guildId: guildId
-							},
-							create: {
-								id: targetChannel,
-								guildId: guildId
-							},
-							update: {}
-						});
-						const sub = await db.youtubeSubscription.create({
-							data: {
-								guildChannelId: targetChannel,
-								youtubeChannelId: result.metadata.externalId
-							}
-						});
-						await youtubeChannelInteraction(interaction, result, sub, targetChannel, lang[guildData.language ?? 'en']);
-					})
-					.catch((err) => {
-						if (err === true) return;
-						console.error(err);
-					});
+				await buttonHandlers.subscribe(ctx, interaction);
+				return;
 			}
 		}
 	});

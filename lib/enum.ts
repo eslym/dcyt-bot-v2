@@ -1,7 +1,7 @@
 export const VideoType = {
 	VIDEO: 'VIDEO',
 	LIVE: 'LIVE',
-	PLAYLIST: 'PLAYLIST'
+	PREMIERE: 'PREMIERE'
 } as const;
 export type VideoType = (typeof VideoType)[keyof typeof VideoType];
 

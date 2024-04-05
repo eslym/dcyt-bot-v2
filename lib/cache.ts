@@ -37,3 +37,15 @@ export const cache = {
 		return this;
 	}
 };
+
+export const lock = {
+	has(key: string) {
+		return cache.has(`$lock:${key}`);
+	},
+	add(key: string) {
+		cache.set(`$lock:${key}`, () => true, 60000);
+	},
+	delete(key: string) {
+		cache.clear(`$lock:${key}`);
+	}
+};
