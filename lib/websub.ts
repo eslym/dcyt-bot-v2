@@ -242,7 +242,12 @@ async function videoCallback(ctx: Context, ch: YoutubeChannel, body: Buffer) {
 		lock.delete(videoId);
 		return;
 	}
-	const notifyType = videoData.schedule ? NotificationType.RESCHEDULE : NotificationType.LIVE;
+	const notifyTime = Date.now() + 300000;
+	const notifyType = videoData.schedule
+		? videoData.schedule.valueOf() < notifyTime
+			? NotificationType.UPCOMING
+			: NotificationType.RESCHEDULE
+		: NotificationType.LIVE;
 	await db.youtubeVideo
 		.update({
 			where: {
