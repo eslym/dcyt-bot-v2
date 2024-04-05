@@ -249,6 +249,8 @@ async function videoCallback(ctx: Context, ch: YoutubeChannel, body: Buffer) {
 				id: videoId
 			},
 			data: {
+				title: videoData.details.title,
+				scheduledAt: videoData.schedule ?? null,
 				[`${notifyType.toLowerCase()}NotifiedAt`]: new Date()
 			}
 		})

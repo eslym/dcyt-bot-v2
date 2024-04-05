@@ -2,7 +2,7 @@ import type { Context } from './ctx';
 import { kClient, kDb } from './symbols';
 import cron from 'node-cron';
 import { postWebsub, topicUrl } from './websub';
-import { VideoType } from './enum';
+import { NotificationType, VideoType } from './enum';
 import { lock } from './cache';
 import { getVideoData } from './crawl';
 import { lang } from './lang';
@@ -55,6 +55,7 @@ export function setupCron(ctx: Context) {
 				upcomingNotifiedAt: null
 			}
 		});
+		const notifyTime = Date.now() - 300000;
 		for (const videoRecord of records) {
 			if (lock.has(videoRecord.id)) continue;
 			lock.add(videoRecord.id);
@@ -67,21 +68,29 @@ export function setupCron(ctx: Context) {
 			});
 			if (!videoData) continue;
 			const videoId = videoRecord.id;
+			const scheduled = videoData.schedule?.valueOf() ?? 0;
 			if (
 				videoRecord.liveNotifiedAt ||
 				videoRecord.upcomingNotifiedAt ||
-				videoData.schedule === videoRecord.scheduledAt
+				(videoData.schedule === videoRecord.scheduledAt && scheduled < notifyTime)
 			) {
 				lock.delete(videoId);
 				continue;
 			}
-			const notifyType = videoData.schedule ? 'RESCHEDULE' : 'LIVE';
+			const notifyType =
+				scheduled >= notifyTime && scheduled < Date.now()
+					? NotificationType.UPCOMING
+					: videoData.schedule
+						? NotificationType.RESCHEDULE
+						: NotificationType.LIVE;
 			await db.youtubeVideo
 				.update({
 					where: {
 						id: videoId
 					},
 					data: {
+						title: videoData.details.title,
+						scheduledAt: videoData.schedule ?? null,
 						[`${notifyType.toLowerCase()}NotifiedAt`]: new Date()
 					}
 				})
