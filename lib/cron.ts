@@ -8,6 +8,7 @@ import { getVideoData } from './crawl';
 import { lang } from './lang';
 import type { TextBasedChannel } from 'discord.js';
 import Mustache from 'mustache';
+import { ucfirst } from './utils';
 
 export function setupCron(ctx: Context) {
 	const db = ctx.get(kDb);
@@ -99,7 +100,7 @@ export function setupCron(ctx: Context) {
 			const subscriptions = await db.youtubeSubscription.findMany({
 				where: {
 					youtubeChannelId: videoRecord.channelId,
-					[`notify${notifyType}`]: true
+					[`notify${ucfirst(notifyType)}`]: true
 				},
 				include: {
 					GuildChannel: {
