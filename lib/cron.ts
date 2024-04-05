@@ -70,7 +70,7 @@ export function setupCron(ctx: Context) {
 			if (!videoData) continue;
 			const videoId = videoRecord.id;
 			const scheduled = videoData.schedule?.valueOf() ?? 0;
-			if (videoData.schedule === videoRecord.scheduledAt && scheduled > notifyTime) {
+			if (videoData.schedule?.valueOf() === videoRecord.scheduledAt?.valueOf() && scheduled > notifyTime) {
 				lock.delete(videoId);
 				continue;
 			}
