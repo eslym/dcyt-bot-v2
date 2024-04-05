@@ -281,16 +281,17 @@ async function youtubeChannelInteraction(
 				)
 			);
 		}
+		const embed = new EmbedBuilder()
+			.setTitle(videoData.metadata.title)
+			.setThumbnail(videoData.metadata.avatar.thumbnails[0].url)
+			.setURL(videoData.metadata.channelUrl)
+			.setColor('#00ff00');
+		if (videoData.metadata.description) {
+			embed.setDescription(escapeDiscordMarkdown(videoData.metadata.description));
+		}
 		await interaction.editReply({
 			content: Mustache.render(l.HINT.CHANNEL, { channel: `<#${targetChannel}>` }),
-			embeds: [
-				new EmbedBuilder()
-					.setTitle(videoData.metadata.title)
-					.setDescription(escapeDiscordMarkdown(videoData.metadata.description))
-					.setThumbnail(videoData.metadata.avatar.thumbnails[0].url)
-					.setURL(videoData.metadata.channelUrl)
-					.setColor('#00ff00')
-			],
+			embeds: [embed],
 			components: rows
 		});
 	} catch (err) {
