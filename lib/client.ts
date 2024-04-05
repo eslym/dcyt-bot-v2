@@ -244,81 +244,62 @@ async function youtubeChannelInteraction(
 	targetChannel: string,
 	l: (typeof lang)[string]
 ) {
-	try {
-		const rows = [
-			new ActionRowBuilder<ButtonBuilder>().addComponents(
-				new ButtonBuilder()
-					.setCustomId(`subscribe:${videoData.metadata.externalId}:${targetChannel}`)
-					.setLabel(sub ? l.ACTION.REMOVE : l.ACTION.ADD)
-					.setStyle(sub ? ButtonStyle.Secondary : ButtonStyle.Success)
-					.setEmoji(sub ? '❌' : '➕')
+	const rows = [
+		new ActionRowBuilder<ButtonBuilder>().addComponents(
+			new ButtonBuilder()
+				.setCustomId(`subscribe:${videoData.metadata.externalId}:${targetChannel}`)
+				.setLabel(sub ? l.ACTION.REMOVE : l.ACTION.ADD)
+				.setStyle(sub ? ButtonStyle.Secondary : ButtonStyle.Success)
+				.setEmoji(sub ? '❌' : '➕')
+		)
+	] as MessageComponents;
+	if (sub) {
+		const categories = Object.keys(NotificationType) as (keyof typeof NotificationType)[];
+		rows.push(
+			new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
+				new StringSelectMenuBuilder()
+					.setCustomId(`notify:${videoData.metadata.externalId}:${targetChannel}`)
+					.setPlaceholder(l.HINT.SELECT_ENABLE)
+					.setMinValues(0)
+					.setMaxValues(categories.length)
+					.addOptions(
+						categories.map((category) => ({
+							value: category,
+							label: l.ACTION.TOGGLE[category].TITLE,
+							description: l.ACTION.TOGGLE[category].DESCRIPTION,
+							default: (sub as any)[`notify${ucfirst(category)}`]
+						}))
+					)
+			),
+			new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
+				new StringSelectMenuBuilder()
+					.setCustomId(`template:${videoData.metadata.externalId}:${targetChannel}`)
+					.setPlaceholder(l.HINT.SELECT_CATEGORY)
+					.setMinValues(1)
+					.setMaxValues(1)
+					.addOptions(
+						categories.map((category) => ({
+							value: category,
+							label: l.ACTION.TOGGLE[category].TITLE,
+							description: l.ACTION.TOGGLE[category].DESCRIPTION
+						}))
+					)
 			)
-		] as MessageComponents;
-		if (sub) {
-			const categories = Object.keys(NotificationType) as (keyof typeof NotificationType)[];
-			rows.push(
-				new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
-					new StringSelectMenuBuilder()
-						.setCustomId(`notify:${videoData.metadata.externalId}:${targetChannel}`)
-						.setPlaceholder(l.HINT.SELECT_ENABLE)
-						.setMinValues(0)
-						.setMaxValues(categories.length)
-						.addOptions(
-							categories.map((category) => ({
-								value: category,
-								label: l.ACTION.TOGGLE[category].TITLE,
-								description: l.ACTION.TOGGLE[category].DESCRIPTION,
-								default: (sub as any)[`notify${ucfirst(category)}`]
-							}))
-						)
-				),
-				new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
-					new StringSelectMenuBuilder()
-						.setCustomId(`template:${videoData.metadata.externalId}:${targetChannel}`)
-						.setPlaceholder(l.HINT.SELECT_CATEGORY)
-						.setMinValues(1)
-						.setMaxValues(1)
-						.addOptions(
-							categories.map((category) => ({
-								value: category,
-								label: l.ACTION.TOGGLE[category].TITLE,
-								description: l.ACTION.TOGGLE[category].DESCRIPTION
-							}))
-						)
-				)
-			);
-		}
-		const embed = new EmbedBuilder()
-			.setTitle(videoData.metadata.title)
-			.setThumbnail(videoData.metadata.avatar.thumbnails[0].url)
-			.setURL(videoData.metadata.channelUrl)
-			.setColor('#00ff00');
-		if (videoData.metadata.description) {
-			embed.setDescription(escapeDiscordMarkdown(videoData.metadata.description));
-		}
-		await interaction.editReply({
-			content: Mustache.render(l.HINT.CHANNEL, { channel: `<#${targetChannel}>` }),
-			embeds: [embed],
-			components: rows
-		});
-	} catch (err) {
-		if (err instanceof InvalidURLError) {
-			await interaction.editReply({
-				embeds: [new EmbedBuilder().setTitle('Error').setDescription(l.ERROR.INVALID_URL).setColor('#ff0000')]
-			});
-			return;
-		}
-		if (err instanceof FetchError && err.status === 404) {
-			await interaction.editReply({
-				embeds: [new EmbedBuilder().setTitle('Error').setDescription(l.ERROR.NOT_FOUND).setColor('#ff0000')]
-			});
-			return;
-		}
-		await interaction.editReply({
-			embeds: [new EmbedBuilder().setTitle('Error').setDescription(l.ERROR.UNKNOWN).setColor('#ff0000')]
-		});
-		throw err;
+		);
 	}
+	const embed = new EmbedBuilder()
+		.setTitle(videoData.metadata.title)
+		.setThumbnail(videoData.metadata.avatar.thumbnails[0].url)
+		.setURL(videoData.metadata.channelUrl)
+		.setColor('#00ff00');
+	if (videoData.metadata.description) {
+		embed.setDescription(escapeDiscordMarkdown(videoData.metadata.description));
+	}
+	await interaction.editReply({
+		content: Mustache.render(l.HINT.CHANNEL, { channel: `<#${targetChannel}>` }),
+		embeds: [embed],
+		components: rows
+	});
 }
 
 async function listSubscriptionInteraction(
@@ -426,7 +407,25 @@ const commandHandlers: Record<string, (ctx: Context, interaction: ChatInputComma
 				const guildData = (await ctx.get(kDb).guild.findUnique({ where: { id: guildId } }))!;
 				const l = lang[guildData.language ?? 'en'];
 				const targetChannel = interaction.options.getString('to', false) ?? interaction.channelId;
-				const result = await getChannelData(source);
+				const result = await getChannelData(source).catch(async (err) => {
+					if (err instanceof InvalidURLError) {
+						await interaction.editReply({
+							embeds: [new EmbedBuilder().setTitle('Error').setDescription(l.ERROR.INVALID_URL).setColor('#ff0000')]
+						});
+						return;
+					}
+					if (err instanceof FetchError && err.status === 404) {
+						await interaction.editReply({
+							embeds: [new EmbedBuilder().setTitle('Error').setDescription(l.ERROR.NOT_FOUND).setColor('#ff0000')]
+						});
+						return;
+					}
+					await interaction.editReply({
+						embeds: [new EmbedBuilder().setTitle('Error').setDescription(l.ERROR.UNKNOWN).setColor('#ff0000')]
+					});
+					throw err;
+				});
+				if (!result) return;
 				const sub = await ctx.get(kDb).youtubeSubscription.findUnique({
 					where: {
 						id: {
