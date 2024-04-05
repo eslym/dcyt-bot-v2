@@ -71,10 +71,10 @@
 	},
 	"LANG": "繁體中文",
 	"NOTIFICATION": {
-		"LIVE": "@here, {{channel}} 開始了一場{{type}}。",
+		"LIVE": "@here, {{channel}} 開始了一場{{type}}。\n{{url}}",
 		"PUBLISH": "@here, {{channel}} 發佈了新影片。\n{{url}}",
-		"RESCHEDULE": "@here, {{channel}} 将{{type}}改期到 <t:{{timestamp}}:F>（<t:{{timestamp}}:R>）。\n{{url}}",
-		"SCHEDULE": "@here, {{channel}} 安排了一場{{type}}在 <t:{{timestamp}}:F>（<t:{{timestamp}}:R>）。\n{{url}}",
+		"RESCHEDULE": "@here, {{channel}} 将{{type}}改期到 <t:{{timestamp}}:R>（<t:{{timestamp}}:F>）。\n{{url}}",
+		"SCHEDULE": "@here, {{channel}} 安排了一場{{type}}在 <t:{{timestamp}}:R>（<t:{{timestamp}}:F>）。\n{{url}}",
 		"UPCOMING": "@here, {{channel}} 的{{type}}快要開始了。\n{{url}}"
 	},
 	"TYPE": {
