@@ -11,6 +11,7 @@ import { startOptions } from './schema';
 import { setupClient } from './client';
 import { handleWebSub } from './websub';
 import { cache } from './cache';
+import { setupCron } from './cron';
 
 axios.defaults.adapter = fetchAdapter;
 
@@ -59,6 +60,8 @@ cli
 		);
 
 		setInterval(() => cache.invalidate(), 15000);
+
+		setupCron(ctx);
 
 		const cleanup = async () => {
 			console.log('Program shutting down');
