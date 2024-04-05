@@ -3,7 +3,7 @@
 import cac from 'cac';
 import { createContext } from './ctx';
 import { kClient, kDb, kOptions, kServer } from './symbols';
-import { Client } from 'discord.js';
+import { Client, IntentsBitField } from 'discord.js';
 import { PrismaClient } from '@prisma/client';
 import axios from 'axios';
 import fetchAdapter from '@haverstack/axios-fetch-adapter';
@@ -41,7 +41,7 @@ cli
 		const ctx = createContext();
 		ctx.set(kOptions, opts.data);
 		ctx.set(kDb, new PrismaClient());
-		ctx.set(kClient, new Client({ intents: [], partials: [] }));
+		ctx.set(kClient, new Client({ intents: [IntentsBitField.Flags.Guilds], partials: [] }));
 		ctx.set(
 			kServer,
 			Bun.serve({
