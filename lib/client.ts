@@ -472,48 +472,91 @@ export function setupClient(ctx: Context) {
 						if (err === true) return;
 						console.error(err);
 					});
-			}
-		} else if (interaction.isModalSubmit()) {
-			const match = /^config:(\w+)(?::(\d+))?$/.exec(interaction.customId);
-			if (!match) return;
-			const [, category, channelId] = match as any as [unknown, NotificationType, Snowflake | undefined];
-			return getGuildId(ctx, interaction)
-				.then(async (guildId) => {
-					const db = ctx.get(kDb);
-					const guildData = (await db.guild.findUnique({ where: { id: guildId } }))!;
-					const value = interaction.fields.getTextInputValue('template') || null;
-					if (channelId) {
-						await db.guildChannel.upsert({
+			} else if (interaction.customId.startsWith('notify:')) {
+				const [source, targetChannel] = interaction.customId.substring('notify:'.length).split(':');
+				return getGuildId(ctx, interaction)
+					.then(async (guildId) => {
+						const db = ctx.get(kDb);
+						const guildData = (await db.guild.findUnique({ where: { id: guildId } }))!;
+						const sub = await db.youtubeSubscription.findUnique({
 							where: {
-								id: channelId,
-								guildId: guildId
-							},
-							create: {
-								id: channelId,
-								guildId: guildId,
-								[`${category.toLowerCase()}Text`]: value
-							},
-							update: {
-								[`${category.toLowerCase()}Text`]: value
+								id: {
+									guildChannelId: targetChannel,
+									youtubeChannelId: source
+								}
 							}
 						});
-					} else {
-						(guildData as any)[`${category.toLowerCase()}Text`] = value;
-						await db.guild.update({
-							where: { id: guildId },
-							data: guildData
+						if (!sub) return;
+						interaction.deferUpdate();
+						const update: any = {};
+						for (const category of Object.values(NotificationType)) {
+							update[`notify${ucfirst(category)}`] = interaction.values.includes(category);
+						}
+						await db.youtubeSubscription.update({
+							where: {
+								id: {
+									guildChannelId: targetChannel,
+									youtubeChannelId: source
+								}
+							},
+							data: update
 						});
-					}
-					if (interaction.isFromMessage()) {
-						await interaction.update({
-							components: configComponents(guildData.language ?? 'en', channelId)
-						});
-					}
-				})
-				.catch((err) => {
-					if (err === true) return;
-					console.error(err);
-				});
+						const result = await cache.get(
+							`https://youtube.com/channel/${source}`,
+							() => fetchProfile(`https://youtube.com/channel/${source}`),
+							600000
+						);
+						await youtubeChannelInteraction(interaction, result, sub, targetChannel, lang[guildData.language ?? 'en']);
+					})
+					.catch((err) => {
+						if (err === true) return;
+						console.error(err);
+					});
+			}
+		} else if (interaction.isModalSubmit()) {
+			if (interaction.customId.startsWith('config:')) {
+				const [category, channelId] = interaction.customId.substring('config:'.length).split(':') as [
+					NotificationType,
+					Snowflake | undefined
+				];
+				return getGuildId(ctx, interaction)
+					.then(async (guildId) => {
+						const db = ctx.get(kDb);
+						const guildData = (await db.guild.findUnique({ where: { id: guildId } }))!;
+						const value = interaction.fields.getTextInputValue('template') || null;
+						if (channelId) {
+							await db.guildChannel.upsert({
+								where: {
+									id: channelId,
+									guildId: guildId
+								},
+								create: {
+									id: channelId,
+									guildId: guildId,
+									[`${category.toLowerCase()}Text`]: value
+								},
+								update: {
+									[`${category.toLowerCase()}Text`]: value
+								}
+							});
+						} else {
+							(guildData as any)[`${category.toLowerCase()}Text`] = value;
+							await db.guild.update({
+								where: { id: guildId },
+								data: guildData
+							});
+						}
+						if (interaction.isFromMessage()) {
+							await interaction.update({
+								components: configComponents(guildData.language ?? 'en', channelId)
+							});
+						}
+					})
+					.catch((err) => {
+						if (err === true) return;
+						console.error(err);
+					});
+			}
 		} else if (interaction.isButton()) {
 			if (interaction.customId.startsWith('subscribe:')) {
 				return getGuildId(ctx, interaction)
