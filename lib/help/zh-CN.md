@@ -8,9 +8,9 @@
 > 配置当前 Discord 群组的全局设置。
 > - **channel**: (可选) 当指定时，配置频道的全局设置。
 
-> ### /subscribe `<channel>` `[to]`
-> 订阅一个 Youtube 频道。
-> - **channel**: 要订阅的 Youtube 频道，可以是 Youtube 链接或频道标识。
+> ### /inspect `<channel>` `[to]`
+> 查看一个 Youtube 频道。
+> - **channel**: 要查看的 Youtube 频道，可以是 Youtube 链接或频道标识。
 > - **to**: (可选) 指定发送通知的频道。
 
 > ### /list `[channel]`

@@ -100,7 +100,7 @@ const guildCommands = [
 		),
 
 	new SlashCommandBuilder()
-		.setName('subscribe')
+		.setName('inspect')
 		.setDescription(lang.en.COMMAND.SUBSCRIBE.DESCRIPTION)
 		.setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
 		.setDescriptionLocalization('zh-CN', lang['zh-CN'].COMMAND.SUBSCRIBE.DESCRIPTION)
@@ -399,7 +399,7 @@ const commandHandlers: Record<string, (ctx: Context, interaction: ChatInputComma
 				console.error(err);
 			});
 	},
-	async subscribe(ctx, interaction) {
+	async inspect(ctx, interaction) {
 		return getGuildId(ctx, interaction)
 			.then(async (guildId) => {
 				let source = interaction.options.getString('channel', true);

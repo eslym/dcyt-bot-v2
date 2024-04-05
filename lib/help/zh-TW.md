@@ -8,9 +8,9 @@
 > 配置當前 Discord 群組的全局設置。
 > - **channel**: (可選) 當指定時，配置頻道的全局設置。
 
-> ### /subscribe `<channel>` `[to]`
-> 訂閱一個 Youtube 頻道。
-> - **channel**: 要訂閱的 Youtube 頻道，可以是 Youtube 連結或頻道標識。
+> ### /inspect `<channel>` `[to]`
+> 查看一個 Youtube 頻道。
+> - **channel**: 要查看的 Youtube 頻道，可以是 Youtube 連結或頻道標識。
 > - **to**: (可選) 指定發送通知的頻道。
 
 > ### /list `[channel]`
