@@ -56,7 +56,7 @@ export function setupCron(ctx: Context) {
 				upcomingNotifiedAt: null
 			}
 		});
-		const notifyTime = Date.now() - 300000;
+		const notifyTime = Date.now() + 300000;
 		for (const videoRecord of records) {
 			if (lock.has(videoRecord.id)) continue;
 			lock.add(videoRecord.id);
@@ -70,16 +70,12 @@ export function setupCron(ctx: Context) {
 			if (!videoData) continue;
 			const videoId = videoRecord.id;
 			const scheduled = videoData.schedule?.valueOf() ?? 0;
-			if (
-				videoRecord.liveNotifiedAt ||
-				videoRecord.upcomingNotifiedAt ||
-				(videoData.schedule === videoRecord.scheduledAt && scheduled < notifyTime)
-			) {
+			if (videoData.schedule === videoRecord.scheduledAt && scheduled > notifyTime) {
 				lock.delete(videoId);
 				continue;
 			}
 			const notifyType =
-				scheduled >= notifyTime && scheduled < Date.now()
+				scheduled <= notifyTime
 					? NotificationType.UPCOMING
 					: videoData.schedule
 						? NotificationType.RESCHEDULE
