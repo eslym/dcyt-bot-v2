@@ -101,7 +101,11 @@ export function setupCron(ctx: Context) {
                     }
                 })
                 .finally(() => lock.delete(videoId));
-            console.log('[cron]', 'Notification detected', { videoId, videoType: videoRecord.type, notifyType });
+            console.log('[cron]', 'Notification detected', {
+                videoId,
+                videoType: videoRecord.type,
+                notifyType
+            });
             const subscriptions = await db.youtubeSubscription.findMany({
                 where: {
                     youtubeChannelId: videoRecord.channelId,

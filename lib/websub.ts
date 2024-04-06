@@ -252,7 +252,7 @@ async function videoCallback(ctx: Context, ch: YoutubeChannel, body: Buffer) {
     if (
         videoRecord.liveNotifiedAt ||
         videoRecord.upcomingNotifiedAt ||
-        videoData.schedule === videoRecord.scheduledAt
+        videoData.schedule?.valueOf() === videoRecord.scheduledAt?.valueOf()
     ) {
         lock.delete(videoId);
         return;
@@ -275,7 +275,11 @@ async function videoCallback(ctx: Context, ch: YoutubeChannel, body: Buffer) {
             }
         })
         .finally(() => lock.delete(videoId));
-    console.log('[http]', 'Incoming notification', { videoId, videoType, notifyType });
+    console.log('[http]', 'Incoming notification', {
+        videoId,
+        videoType,
+        notifyType
+    });
     const subscriptions = await db.youtubeSubscription.findMany({
         where: {
             youtubeChannelId: ch.id,

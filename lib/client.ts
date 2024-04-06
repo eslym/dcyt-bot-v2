@@ -921,6 +921,39 @@ export function setupClient(ctx: Context) {
         }
     });
 
+    client.on('guildCreate', async (guild) => {
+        console.log('[bot]', 'Joined guild.', {
+            id: guild.id,
+            name: guild.name
+        });
+        await db.guild.upsert({
+            where: { id: guild.id },
+            create: { id: guild.id },
+            update: {}
+        });
+    });
+    client.on('guildDelete', async (guild) => {
+        console.log('[bot]', 'Leaved guild.', {
+            id: guild.id,
+            name: guild.name
+        });
+        const chs = await db.youtubeChannel.findMany({
+            where: {
+                Subscriptions: {
+                    some: {
+                        guildChannelId: guild.id
+                    }
+                }
+            }
+        });
+        await db.guild.delete({
+            where: { id: guild.id }
+        });
+        for (const ch of chs) {
+            await checkSubs(ctx, ch.id).catch(console.error);
+        }
+    });
+
     client.on('interactionCreate', async (interaction) => {
         if (interaction.isChatInputCommand()) {
             await commandHandlers[interaction.commandName]?.(ctx, interaction);
