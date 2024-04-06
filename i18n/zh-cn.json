@@ -1,85 +1,85 @@
 {
-	"ACTION": {
-		"ADD": "添加通知",
-		"NEXT": "下一页",
-		"PREVIOUS": "上一页",
-		"REMOVE": "移除通知",
-		"TOGGLE": {
-			"LIVE": {
-				"DESCRIPTION": "当突发直播或首播时收到通知",
-				"TITLE": "突发通知"
-			},
-			"PUBLISH": {
-				"DESCRIPTION": "当有新影片时收到通知",
-				"TITLE": "新影片通知"
-			},
-			"RESCHEDULE": {
-				"DESCRIPTION": "当直播或首播改期时收到通知",
-				"TITLE": "改期通知"
-			},
-			"SCHEDULE": {
-				"DESCRIPTION": "当频道安排了新的直播或首播时收到通知",
-				"TITLE": "直播与首播通知"
-			},
-			"UPCOMING": {
-				"DESCRIPTION": "在直播或首播五分钟前收到通知",
-				"TITLE": "开始前通知"
-			}
-		}
-	},
-	"COMMAND": {
-		"CONFIG": {
-			"DESCRIPTION": "全局通知信息设定",
-			"OPTIONS": {
-				"CHANNEL": "选择一个频道设定"
-			}
-		},
-		"HELP": {
-			"DESCRIPTION": "帮助"
-		},
-		"LIST": {
-			"DESCRIPTION": "列出此频道的通知",
-			"OPTIONS": {
-				"CHANNEL": "指定一个频道来列出通知"
-			}
-		},
-		"SUBSCRIBE": {
-			"DESCRIPTION": "订阅通知",
-			"OPTIONS": {
-				"CHANNEL": "Youtube 链接或频道标识",
-				"TO": "接收通知的频道（默认为当前频道）"
-			}
-		}
-	},
-	"ERROR": {
-		"INVALID_URL": "无效的Youtube链接或标识",
-		"NOT_FOUND": "无法找到对应的Youtube频道",
-		"UNKNOWN": "发生未知错误"
-	},
-	"HINT": {
-		"CHANNEL": "通知频道：{{channel}}",
-		"NO_SUBSCRIPTIONS": "{{channel}} 并没有开启任何通知",
-		"SELECT_CATEGORY": "选择一个项目进行编辑",
-		"SELECT_CHANNEL": "选择一个 Youtube 频道来预览",
-		"SELECT_ENABLE": "选择需要通知的项目",
-		"SELECT_LANGUAGE": "选择一个语言",
-		"SETTINGS_FOR": "{{channel}} 的设定"
-	},
-	"LABEL": {
-		"LANGUAGE": "通知语言",
-		"TEMPLATE": "通知信息模板"
-	},
-	"LANG": "简体中文",
-	"NOTIFICATION": {
-		"LIVE": "@here, {{channel}} 开始了一场{{type}}。\n{{url}}",
-		"PUBLISH": "@here, {{channel}} 发布了新影片。\n{{url}}",
-		"RESCHEDULE": "@here, {{channel}} 将{{type}}改期到 <t:{{timestamp}}:F>（<t:{{timestamp}}:R>）。\n{{url}}",
-		"SCHEDULE": "@here, {{channel}} 安排了一场{{type}}在 <t:{{timestamp}}:F>（<t:{{timestamp}}:R>）。\n{{url}}",
-		"UPCOMING": "@here, {{channel}} 的{{type}}快要开始了。\n{{url}}"
-	},
-	"TYPE": {
-		"LIVE": "直播",
-		"PREMIERE": "首播",
-		"VIDEO": "影片"
-	}
+  "ACTION": {
+    "ADD": "添加通知",
+    "NEXT": "下一页",
+    "PREVIOUS": "上一页",
+    "REMOVE": "移除通知",
+    "TOGGLE": {
+      "LIVE": {
+        "DESCRIPTION": "当突发直播或首播时收到通知",
+        "TITLE": "突发通知"
+      },
+      "PUBLISH": {
+        "DESCRIPTION": "当有新影片时收到通知",
+        "TITLE": "新影片通知"
+      },
+      "RESCHEDULE": {
+        "DESCRIPTION": "当直播或首播改期时收到通知",
+        "TITLE": "改期通知"
+      },
+      "SCHEDULE": {
+        "DESCRIPTION": "当频道安排了新的直播或首播时收到通知",
+        "TITLE": "直播与首播通知"
+      },
+      "UPCOMING": {
+        "DESCRIPTION": "在直播或首播五分钟前收到通知",
+        "TITLE": "开始前通知"
+      }
+    }
+  },
+  "COMMAND": {
+    "CONFIG": {
+      "DESCRIPTION": "全局通知信息设定",
+      "OPTIONS": {
+        "CHANNEL": "选择一个频道设定"
+      }
+    },
+    "HELP": {
+      "DESCRIPTION": "帮助"
+    },
+    "LIST": {
+      "DESCRIPTION": "列出此频道的通知",
+      "OPTIONS": {
+        "CHANNEL": "指定一个频道来列出通知"
+      }
+    },
+    "SUBSCRIBE": {
+      "DESCRIPTION": "订阅通知",
+      "OPTIONS": {
+        "CHANNEL": "Youtube 链接或频道标识",
+        "TO": "接收通知的频道（默认为当前频道）"
+      }
+    }
+  },
+  "ERROR": {
+    "INVALID_URL": "无效的Youtube链接或标识",
+    "NOT_FOUND": "无法找到对应的Youtube频道",
+    "UNKNOWN": "发生未知错误"
+  },
+  "HINT": {
+    "CHANNEL": "通知频道：{{channel}}",
+    "NO_SUBSCRIPTIONS": "{{channel}} 并没有开启任何通知",
+    "SELECT_CATEGORY": "选择一个项目进行编辑",
+    "SELECT_CHANNEL": "选择一个 Youtube 频道来预览",
+    "SELECT_ENABLE": "选择需要通知的项目",
+    "SELECT_LANGUAGE": "选择一个语言",
+    "SETTINGS_FOR": "{{channel}} 的设定"
+  },
+  "LABEL": {
+    "LANGUAGE": "通知语言",
+    "TEMPLATE": "通知信息模板"
+  },
+  "LANG": "简体中文",
+  "NOTIFICATION": {
+    "LIVE": "@here, {{channel}} 开始了一场{{type}}。\n{{url}}",
+    "PUBLISH": "@here, {{channel}} 发布了新影片。\n{{url}}",
+    "RESCHEDULE": "@here, {{channel}} 将{{type}}改期到 <t:{{timestamp}}:F>（<t:{{timestamp}}:R>）。\n{{url}}",
+    "SCHEDULE": "@here, {{channel}} 安排了一场{{type}}在 <t:{{timestamp}}:F>（<t:{{timestamp}}:R>）。\n{{url}}",
+    "UPCOMING": "@here, {{channel}} 的{{type}}快要开始了。\n{{url}}"
+  },
+  "TYPE": {
+    "LIVE": "直播",
+    "PREMIERE": "首播",
+    "VIDEO": "影片"
+  }
 }
