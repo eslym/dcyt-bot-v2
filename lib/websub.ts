@@ -189,10 +189,14 @@ async function videoCallback(ctx: Context, ch: YoutubeChannel, body: Buffer) {
                 }
             })
             .finally(() => lock.delete(videoId));
+        if (videoData.details.isLiveContent && !videoData.details.isLive && !videoData.schedule) {
+            console.log('[http]', 'Ignoring finished live content', { videoId, videoType });
+            return;
+        }
         const publishedAt = new Date(xml.feed.entry.published);
-        if (Date.now() - publishedAt.valueOf() > 30 * 24 * 60 * 60 * 1000) {
-            // Sometimes youtube will send old video, so we set threshold to 30 days
-            // ignore the video if it's older than 30 days
+        if (videoType === VideoType.VIDEO && Date.now() - publishedAt.valueOf() > 3 * 24 * 60 * 60 * 1000) {
+            // Sometimes youtube will send old video, so we set threshold to 3 days
+            // ignore the video if it's older than 3 days
             console.log('[http]', 'Ignoring old video', { videoId, videoType });
             lock.delete(videoId);
             return;
