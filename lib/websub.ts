@@ -145,7 +145,7 @@ async function videoCallback(ctx: Context, ch: YoutubeChannel, body: Buffer) {
     if ('at:deleted-entry' in xml.feed) {
         const at = new Date(xml.feed['at:deleted-entry']['@when']);
         const videoId = xml.feed['at:deleted-entry']['@ref'].split(':').pop()!;
-        await db.youtubeVideo.update({
+        await db.youtubeVideo.updateMany({
             where: {
                 id: videoId
             },
