@@ -71,11 +71,11 @@
   },
   "LANG": "简体中文",
   "NOTIFICATION": {
-    "LIVE": "@here, {{channel}} 开始了一场{{type}}。\n{{url}}",
-    "PUBLISH": "@here, {{channel}} 发布了新影片。\n{{url}}",
-    "RESCHEDULE": "@here, {{channel}} 将{{type}}改期到 <t:{{timestamp}}:F>（<t:{{timestamp}}:R>）。\n{{url}}",
-    "SCHEDULE": "@here, {{channel}} 安排了一场{{type}}在 <t:{{timestamp}}:F>（<t:{{timestamp}}:R>）。\n{{url}}",
-    "UPCOMING": "@here, {{channel}} 的{{type}}快要开始了。\n{{url}}"
+    "LIVE": "@here, {{channel}} 开始了一场{{type}}。\n{{{url}}}",
+    "PUBLISH": "@here, {{channel}} 发布了新影片。\n{{{url}}}",
+    "RESCHEDULE": "@here, {{channel}} 将{{type}}改期到 <t:{{timestamp}}:F>（<t:{{timestamp}}:R>）。\n{{{url}}}",
+    "SCHEDULE": "@here, {{channel}} 安排了一场{{type}}在 <t:{{timestamp}}:F>（<t:{{timestamp}}:R>）。\n{{{url}}}",
+    "UPCOMING": "@here, {{channel}} 的{{type}}快要开始了。\n{{{url}}}"
   },
   "TYPE": {
     "LIVE": "直播",

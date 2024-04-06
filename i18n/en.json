@@ -71,11 +71,11 @@
   },
   "LANG": "English",
   "NOTIFICATION": {
-    "LIVE": "@here, {{channel}} started a {{type}}.\n{{url}}",
-    "PUBLISH": "@here, {{channel}} published a new video.\n{{url}}",
-    "RESCHEDULE": "@here, {{channel}} rescheduled a {{type}} to <t:{{timestamp}}:F> (<t:{{timestamp}}:R>).\n{{url}}",
-    "SCHEDULE": "@here, {{channel}} scheduled a new {{type}} at <t:{{timestamp}}:F> (<t:{{timestamp}}:R>).\n{{url}}",
-    "UPCOMING": "@here, {{channel}}'s {{type}} is about to start.\n{{url}}"
+    "LIVE": "@here, {{channel}} started a {{type}}.\n{{{url}}}",
+    "PUBLISH": "@here, {{channel}} published a new video.\n{{{url}}}",
+    "RESCHEDULE": "@here, {{channel}} rescheduled a {{type}} to <t:{{timestamp}}:F> (<t:{{timestamp}}:R>).\n{{{url}}}",
+    "SCHEDULE": "@here, {{channel}} scheduled a new {{type}} at <t:{{timestamp}}:F> (<t:{{timestamp}}:R>).\n{{{url}}}",
+    "UPCOMING": "@here, {{channel}}'s {{type}} is about to start.\n{{{url}}}"
   },
   "TYPE": {
     "LIVE": "live stream",
