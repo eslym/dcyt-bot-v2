@@ -43,7 +43,7 @@ import { ucfirst } from './utils';
 import { postWebsub } from './websub';
 
 Mustache.escape = function escapeMarkdown(text) {
-    const markdownSpecialChars = /([\\`*_\[\]\-~])/g;
+    const markdownSpecialChars = /([\\`*_\[\]\-~<])/g;
     return text.replace(markdownSpecialChars, '\\$1');
 };
 
@@ -296,7 +296,7 @@ async function youtubeChannelInteraction(
         embed.setDescription(escapeDiscordMarkdown(videoData.metadata.description));
     }
     await interaction.editReply({
-        content: Mustache.render(l.HINT.CHANNEL, { channel: `<#${targetChannel}>` }),
+        content: Mustache.render(l.HINT.CHANNEL, { channel: targetChannel }),
         embeds: [embed],
         components: rows
     });
@@ -323,7 +323,7 @@ async function listSubscriptionInteraction(
     }
     if (total === 0) {
         await interaction.editReply({
-            content: Mustache.render(l.HINT.NO_SUBSCRIPTIONS, { channel: `<#${dcCh}>` })
+            content: Mustache.render(l.HINT.NO_SUBSCRIPTIONS, { channel: dcCh })
         });
         return;
     }
@@ -361,7 +361,7 @@ async function listSubscriptionInteraction(
         .setDisabled(page * 5 >= total);
 
     await interaction.editReply({
-        content: Mustache.render(l.HINT.CHANNEL, { channel: `<#${dcCh}>` }),
+        content: Mustache.render(l.HINT.CHANNEL, { channel: dcCh }),
         components: subscriptions.length
             ? [
                   new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(menu),
@@ -387,7 +387,7 @@ const commandHandlers: Record<string, (ctx: Context, interaction: ChatInputComma
                     return;
                 }
                 await interaction.reply({
-                    content: Mustache.render(l.HINT.SETTINGS_FOR, { channel: `<#${channel.id}>` }),
+                    content: Mustache.render(l.HINT.SETTINGS_FOR, { channel: channel.id }),
                     components: configComponents(guildData.language ?? 'en', channel.id),
                     ephemeral: true
                 });

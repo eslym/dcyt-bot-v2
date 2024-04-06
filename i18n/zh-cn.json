@@ -57,13 +57,13 @@
     "UNKNOWN": "发生未知错误"
   },
   "HINT": {
-    "CHANNEL": "通知频道：{{channel}}",
-    "NO_SUBSCRIPTIONS": "{{channel}} 并没有开启任何通知",
+    "CHANNEL": "通知频道：<#{{channel}}>",
+    "NO_SUBSCRIPTIONS": "<#{{channel}}> 并没有开启任何通知",
     "SELECT_CATEGORY": "选择一个项目进行编辑",
     "SELECT_CHANNEL": "选择一个 Youtube 频道来预览",
     "SELECT_ENABLE": "选择需要通知的项目",
     "SELECT_LANGUAGE": "选择一个语言",
-    "SETTINGS_FOR": "{{channel}} 的设定"
+    "SETTINGS_FOR": "<#{{channel}}> 的设定"
   },
   "LABEL": {
     "LANGUAGE": "通知语言",
