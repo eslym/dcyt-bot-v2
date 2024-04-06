@@ -2,7 +2,7 @@ import type { Context } from './ctx';
 import { kClient, kDb } from './symbols';
 import cron from 'node-cron';
 import { postWebsub, topicUrl } from './websub';
-import { NotificationType, VideoType } from './enum';
+import { VideoType } from './enum';
 import { lock } from './cache';
 import { getVideoData } from './crawl';
 import { lang } from './lang';
@@ -62,7 +62,6 @@ export function setupCron(ctx: Context) {
                 deletedAt: null
             }
         });
-        const notifyTime = Date.now() + 300000;
         for (const videoRecord of records) {
             if (lock.has(videoRecord.id)) continue;
             lock.add(videoRecord.id);
