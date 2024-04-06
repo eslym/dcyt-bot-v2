@@ -12,7 +12,6 @@ export interface VideoDetails {
     title: string;
     lengthSeconds: string;
     isLive?: boolean;
-    isPremiere?: boolean;
     keywords?: string[];
     channelId: string;
     isOwnerViewing: boolean;
@@ -257,9 +256,6 @@ function extractVideo(scripts: string[]): VideoCrawlResult {
     };
 
     if (ytInitialPlayerResponse.playabilityStatus.liveStreamability) {
-        if (ytInitialPlayerResponse.playabilityStatus.reason?.startsWith('Premiere')) {
-            result.details.isPremiere = true;
-        }
         let streamAbility = ytInitialPlayerResponse.playabilityStatus.liveStreamability.liveStreamabilityRenderer;
         if (streamAbility.offlineSlate) {
             result.schedule = new Date(

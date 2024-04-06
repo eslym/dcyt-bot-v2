@@ -5,7 +5,7 @@ import { kClient, kDb } from './symbols';
 import { createHmac } from 'crypto';
 import { convert } from 'xmlbuilder2';
 import { NotificationType, VideoType } from './enum';
-import { ucfirst } from './utils';
+import { ucfirst, determineVideoType, determineNotificationType } from './utils';
 import type { TextBasedChannel } from 'discord.js';
 import { lang } from './lang';
 import Mustache from 'mustache';
@@ -169,7 +169,7 @@ async function videoCallback(ctx: Context, ch: YoutubeChannel, body: Buffer) {
         .youtubeVideo.findUnique({ where: { id: videoId } })
         .catch(catchCase);
     const videoData = await getVideoData(videoId, false).catch(catchCase);
-    const videoType = videoData.details.isLiveContent ? (videoData.details.isPremiere ? 'PREMIERE' : 'LIVE') : 'VIDEO';
+    const videoType = determineVideoType(videoData);
     if (!videoRecord) {
         const notifyType =
             videoType === 'VIDEO'
@@ -249,20 +249,11 @@ async function videoCallback(ctx: Context, ch: YoutubeChannel, body: Buffer) {
             .finally(() => lock.delete(videoId));
         return;
     }
-    if (
-        videoRecord.liveNotifiedAt ||
-        videoRecord.upcomingNotifiedAt ||
-        videoData.schedule?.valueOf() === videoRecord.scheduledAt?.valueOf()
-    ) {
+    const notifyType = determineNotificationType(videoData, videoRecord);
+    if (!notifyType) {
         lock.delete(videoId);
         return;
     }
-    const notifyTime = Date.now() + 300000;
-    const notifyType = videoData.schedule
-        ? videoData.schedule.valueOf() < notifyTime
-            ? NotificationType.UPCOMING
-            : NotificationType.RESCHEDULE
-        : NotificationType.LIVE;
     await db.youtubeVideo
         .update({
             where: {

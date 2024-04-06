@@ -8,7 +8,7 @@ import { getVideoData } from './crawl';
 import { lang } from './lang';
 import type { TextBasedChannel } from 'discord.js';
 import Mustache from 'mustache';
-import { ucfirst } from './utils';
+import { determineNotificationType, ucfirst } from './utils';
 
 export function setupCron(ctx: Context) {
     const db = ctx.get(kDb);
@@ -58,7 +58,8 @@ export function setupCron(ctx: Context) {
                     in: [VideoType.LIVE, VideoType.PREMIERE]
                 },
                 liveNotifiedAt: null,
-                upcomingNotifiedAt: null
+                upcomingNotifiedAt: null,
+                deletedAt: null
             }
         });
         const notifyTime = Date.now() + 300000;
@@ -78,17 +79,11 @@ export function setupCron(ctx: Context) {
             });
             if (!videoData) continue;
             const videoId = videoRecord.id;
-            const scheduled = videoData.schedule?.valueOf() ?? 0;
-            if (videoData.schedule?.valueOf() === videoRecord.scheduledAt?.valueOf() && scheduled > notifyTime) {
+            const notifyType = determineNotificationType(videoData, videoRecord);
+            if (!notifyType) {
                 lock.delete(videoId);
                 continue;
             }
-            const notifyType =
-                scheduled <= notifyTime
-                    ? NotificationType.UPCOMING
-                    : videoData.schedule
-                      ? NotificationType.RESCHEDULE
-                      : NotificationType.LIVE;
             await db.youtubeVideo
                 .update({
                     where: {
