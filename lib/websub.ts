@@ -254,7 +254,7 @@ async function videoCallback(ctx: Context, ch: YoutubeChannel, body: Buffer) {
         return;
     }
     const notifyType = determineNotificationType(videoData, videoRecord);
-    if (!notifyType) {
+    if (!notifyType || videoRecord.liveNotifiedAt || videoRecord.upcomingNotifiedAt) {
         lock.delete(videoId);
         return;
     }

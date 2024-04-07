@@ -32,6 +32,12 @@ export function determineNotificationType(
     }
     const now = Date.now();
     const notifyTime = now + 5 * 60 * 1000;
+    console.log({
+        id: videoRecord.id,
+        schedule,
+        now,
+        notifyTime
+    });
     if (schedule > now && schedule <= notifyTime) {
         return NotificationType.UPCOMING;
     }
