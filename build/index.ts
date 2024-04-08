@@ -1,9 +1,10 @@
 import { chmodSync } from 'fs';
-import { ImportMarkdown, UseBrowserAxios } from './lib/plugins';
-import pkg from './package.json';
+import { ImportMarkdown, UseBrowserAxios } from '../lib/plugins';
+import pkg from '../package.json';
 import { $ } from 'bun';
+import { resolve } from 'path';
 
-const outdir = `${import.meta.dir}/dist`;
+const outdir = resolve(import.meta.dir, '../dist');
 
 function humanFileSize(bytes: number, si = false, dp = 1) {
     const thresh = si ? 1000 : 1024;
@@ -58,10 +59,52 @@ for (const file of bundle.outputs) {
 }
 
 delete (pkg as any).devDependencies;
+delete (pkg as any).peerDependencies;
 pkg.module = 'index.js';
 
 await Bun.write('./dist/package.json', JSON.stringify(pkg, null, 2));
 
-await $`cp -r -v ${import.meta.dir}/drizzle ${outdir}`;
-
 chmodSync('./dist/index.js', '755');
+
+console.log("\nCopying 'drizzle' folder");
+
+await $`cp -r -v ${import.meta.dir}/../drizzle ${outdir}`;
+
+console.time('\nbuild drizzle-lib');
+const drizzle = await Bun.build({
+    entrypoints: [
+        './build/drizzle/drizzle-orm.ts',
+        './build/drizzle/sqlite-core.ts',
+        './build/drizzle/bun-sqlite.ts',
+        './build/drizzle/migrator.ts'
+    ],
+    outdir: resolve(outdir, 'drizzle/lib'),
+    target: 'bun',
+    minify: {
+        syntax: true
+    },
+    splitting: true
+});
+console.timeEnd('build drizzle-lib');
+
+for (const file of drizzle.outputs) {
+    console.log(
+        `${file.path.padEnd(50, ' ')} ${`${file.size} bytes`.padStart(20, ' ')} ${humanFileSize(file.size).padStart(
+            10,
+            ' '
+        )}`
+    );
+}
+
+drizzle.logs.forEach((log) => console.log(log));
+
+const index = await Bun.file(resolve(outdir, 'index.js')).text();
+
+await Bun.write(
+    resolve(outdir, 'index.js'),
+    index
+        .replace('from "drizzle-orm"', 'from "./drizzle/lib/drizzle-orm"')
+        .replace('from "drizzle-orm/sqlite-core"', 'from "./drizzle/lib/sqlite-core"')
+        .replace('from "drizzle-orm/bun-sqlite"', 'from "./drizzle/lib/bun-sqlite"')
+        .replace('from "drizzle-orm/bun-sqlite/migrator"', 'from "./drizzle/lib/migrator"')
+);
