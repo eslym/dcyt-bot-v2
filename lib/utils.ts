@@ -8,6 +8,7 @@ import { lang } from './lang';
 import Mustache from 'mustache';
 import * as t from './db/schema';
 import { sql } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/sqlite-core';
 
 export function ucfirst(str: string) {
     return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
@@ -51,25 +52,32 @@ export async function publishNotification(
     videoData: VideoCrawlResult,
     notifyType: NotificationType
 ) {
+    const field = `${notifyType.toLowerCase()}Text` as 'publishText' | 'upcomingText' | 'liveText' | 'rescheduleText';
+
+    const sub = alias(t.youtubeSubscription, 'sub');
+    const ch = alias(t.guildChannel, 'ch');
+    const g = alias(t.guild, 'g');
+
     const subscriptions = db
-        .select()
-        .from(t.youtubeSubscription)
+        .select({
+            channelId: ch.id,
+            language: g.language,
+            [field]: sub[field],
+            [field + 'Channel']: ch[field],
+            [field + 'Guild']: g[field]
+        })
+        .from(sub)
         .where(
-            sql`${t.youtubeSubscription.youtubeChannelId} = ${videoData.details.channelId} AND ${(t.youtubeSubscription as any)[`notify${ucfirst(notifyType)}`]}`
+            sql`${sub.youtubeChannelId} = ${videoData.details.channelId} AND ${(sub as any)[`notify${ucfirst(notifyType)}`]}`
         )
-        .innerJoin(t.guildChannel, sql`${t.youtubeSubscription.guildChannelId} = ${t.guildChannel.id}`)
-        .innerJoin(t.guild, sql`${t.guildChannel.guildId} = ${t.guild.id}`)
+        .innerJoin(ch, sql`${sub.guildChannelId} = ${ch.id}`)
+        .innerJoin(g, sql`${ch.guildId} = ${g.id}`)
         .all();
     for (const sub of subscriptions) {
         try {
-            const ch = (await client.channels.fetch(sub.GuildChannel.id)) as TextBasedChannel;
-            const field = `${notifyType.toLowerCase()}Text`;
-            const l = lang[sub.Guild.language ?? 'en'];
-            const template =
-                (sub.YoutubeSubscription as any)[field] ??
-                (sub.GuildChannel as any)[field] ??
-                (sub.Guild as any)[field] ??
-                l.NOTIFICATION[notifyType];
+            const ch = (await client.channels.fetch(sub.channelId)) as TextBasedChannel;
+            const l = lang[sub.language ?? 'en'];
+            const template = sub[field] ?? sub[field + 'Channel'] ?? sub[field + 'Guild'] ?? l.NOTIFICATION[notifyType];
             const data: any = {
                 title: videoData.details.title,
                 url: `https://youtube.com/watch?v=${videoData.details.videoId}`,
@@ -79,7 +87,7 @@ export async function publishNotification(
             };
             await ch.send(Mustache.render(template, data));
         } catch (err) {
-            console.error('[http]', `Failed to notify ${sub.GuildChannel.id}`, { error: err });
+            console.error('[http]', `Failed to notify ${sub.channelId}`, { error: err });
         }
     }
 }
