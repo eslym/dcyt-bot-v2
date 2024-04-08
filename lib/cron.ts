@@ -5,35 +5,27 @@ import { postWebsub, topicUrl } from './websub';
 import { VideoType } from './enum';
 import { lock } from './cache';
 import { getVideoData } from './crawl';
-import { lang } from './lang';
-import type { TextBasedChannel } from 'discord.js';
-import Mustache from 'mustache';
-import { determineNotificationType, ucfirst } from './utils';
+import { determineNotificationType, publishNotification } from './utils';
+import * as t from './db/schema';
+import { sql } from 'drizzle-orm';
 
 export function setupCron(ctx: Context) {
     const db = ctx.get(kDb);
     const client = ctx.get(kClient);
 
     cron.schedule('*/15 * * * *', async () => {
-        const chs = await db.youtubeChannel.findMany({
-            where: {
-                AND: [
-                    { webhookSecret: { not: null } },
-                    {
-                        OR: [
-                            { webhookExpiresAt: { lte: new Date(Date.now() - 24 * 3600000) } },
-                            { webhookExpiresAt: null }
-                        ]
-                    }
-                ]
-            },
-            select: {
-                id: true,
-                webhookId: true,
-                webhookSecret: true,
-                webhookExpiresAt: true
-            }
-        });
+        const chs = db
+            .select({
+                id: t.youtubeChannel.id,
+                webhookId: t.youtubeChannel.webhookId,
+                webhookSecret: t.youtubeChannel.webhookSecret,
+                webhookExpiresAt: t.youtubeChannel.webhookExpiresAt
+            })
+            .from(t.youtubeChannel)
+            .where(
+                sql`${t.youtubeChannel.webhookSecret} IS NOT NULL AND (${t.youtubeChannel.webhookExpiresAt} IS NULL OR ${t.youtubeChannel.webhookExpiresAt} <= ${new Date(Date.now() - 24 * 3600000)})`
+            )
+            .all();
         if (!chs.length) return;
         for (const ch of chs) {
             const res = await postWebsub(
@@ -52,16 +44,13 @@ export function setupCron(ctx: Context) {
     });
 
     cron.schedule('*/5 * * * *', async () => {
-        const records = await db.youtubeVideo.findMany({
-            where: {
-                type: {
-                    in: [VideoType.LIVE, VideoType.PREMIERE]
-                },
-                liveNotifiedAt: null,
-                upcomingNotifiedAt: null,
-                deletedAt: null
-            }
-        });
+        const records = db
+            .select()
+            .from(t.youtubeVideo)
+            .where(
+                sql`${t.youtubeVideo.type} IN ${[VideoType.LIVE, VideoType.PREMIERE]} AND ${t.youtubeVideo.liveNotifiedAt} IS NULL AND ${t.youtubeVideo.upcomingNotifiedAt} IS NULL AND ${t.youtubeVideo.deletedAt} IS NULL`
+            )
+            .all();
         for (const videoRecord of records) {
             if (lock.has(videoRecord.id)) continue;
             lock.add(videoRecord.id);
@@ -83,55 +72,22 @@ export function setupCron(ctx: Context) {
                 lock.delete(videoId);
                 continue;
             }
-            await db.youtubeVideo
-                .update({
-                    where: {
-                        id: videoId
-                    },
-                    data: {
-                        title: videoData.details.title,
-                        scheduledAt: videoData.schedule ?? null,
-                        [`${notifyType.toLowerCase()}NotifiedAt`]: new Date()
-                    }
+            db.update(t.youtubeVideo)
+                .set({
+                    title: videoData.details.title,
+                    scheduledAt: videoData.schedule ?? null,
+                    [`${notifyType.toLowerCase()}NotifiedAt`]: new Date(),
+                    updatedAt: new Date()
                 })
-                .finally(() => lock.delete(videoId));
+                .where(sql`${t.youtubeVideo.id} = ${videoId}`)
+                .run();
+            lock.delete(videoId);
             console.log('[cron]', 'Notification detected', {
                 videoId,
                 videoType: videoRecord.type,
                 notifyType
             });
-            const subscriptions = await db.youtubeSubscription.findMany({
-                where: {
-                    youtubeChannelId: videoRecord.channelId,
-                    [`notify${ucfirst(notifyType)}`]: true
-                },
-                include: {
-                    GuildChannel: {
-                        include: {
-                            Guild: true
-                        }
-                    }
-                }
-            });
-            for (const sub of subscriptions) {
-                try {
-                    const ch = (await client.channels.fetch(sub.guildChannelId)) as TextBasedChannel;
-                    const field = `${notifyType.toLowerCase()}Text`;
-                    const l = lang[sub.GuildChannel.Guild.language ?? 'en'];
-                    const template =
-                        (sub as any)[field] ?? (sub.GuildChannel as any)[field] ?? l.NOTIFICATION[notifyType];
-                    const data: any = {
-                        title: videoData.details.title,
-                        url: `https://youtube.com/watch?v=${videoId}`,
-                        channel: videoData.details.author,
-                        type: l.TYPE[videoRecord.type as VideoType],
-                        timestamp: videoData.schedule ? Math.floor(videoData.schedule.valueOf() / 1000) : undefined
-                    };
-                    await ch.send(Mustache.render(template, data));
-                } catch (err) {
-                    console.error('[http]', `Failed to notify ${sub.guildChannelId}`, { error: err });
-                }
-            }
+            publishNotification(client, db, videoRecord.type as VideoType, videoData, notifyType);
         }
     });
 }

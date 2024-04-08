@@ -13,6 +13,7 @@ import { cache } from './cache';
 import { setupCron } from './cron';
 import { Database } from 'bun:sqlite';
 import { drizzle } from 'drizzle-orm/bun-sqlite';
+import { migrate } from 'drizzle-orm/bun-sqlite/migrator';
 import { resolve } from 'path';
 
 axios.defaults.adapter = fetchAdapter;
@@ -44,14 +45,16 @@ cli.command('', 'Run the bot')
         const ctx = createContext();
 
         const db = new Database(opts.data.database);
+        const orm = drizzle(db, {
+            schema: await import('./db/schema')
+        });
+
+        migrate(orm, {
+            migrationsFolder: resolve(import.meta.dirname, process.env.MIGRATIONS_FOLDER ?? 'drizzle')
+        });
 
         ctx.set(kOptions, opts.data);
-        ctx.set(
-            kDb,
-            drizzle(db, {
-                schema: await import('./db/schema')
-            })
-        );
+        ctx.set(kDb, orm);
 
         ctx.set(kClient, new Client({ intents: [IntentsBitField.Flags.Guilds], partials: [] }));
         ctx.set(

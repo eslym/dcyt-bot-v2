@@ -39,7 +39,10 @@ const bundle = await Bun.build({
         syntax: true
     },
     plugins: [UseBrowserAxios, ImportMarkdown],
-    external: Object.keys(pkg.dependencies)
+    external: Object.keys((pkg as any).dependencies ?? {}),
+    define: {
+        'process.env.MIGRATIONS_FOLDER': '"drizzle"'
+    }
 });
 console.timeEnd('build bundle');
 
@@ -59,6 +62,6 @@ pkg.module = 'index.js';
 
 await Bun.write('./dist/package.json', JSON.stringify(pkg, null, 2));
 
-await $`cp -r ${import.meta.dir}/prisma ${outdir}`;
+await $`cp -r -v ${import.meta.dir}/drizzle ${outdir}`;
 
 chmodSync('./dist/index.js', '755');

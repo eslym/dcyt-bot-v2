@@ -1,4 +1,4 @@
-import { sqliteTable, text, numeric, uniqueIndex, primaryKey } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, numeric, uniqueIndex, primaryKey, integer } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 
 export const guild = sqliteTable('Guild', {
@@ -9,8 +9,8 @@ export const guild = sqliteTable('Guild', {
     rescheduleText: text('rescheduleText'),
     upcomingText: text('upcomingText'),
     liveText: text('liveText'),
-    createdAt: numeric('createdAt').default(sql`(CURRENT_TIMESTAMP)`),
-    updatedAt: numeric('updatedAt')
+    createdAt: integer('createdAt', { mode: 'timestamp' }).default(sql`(CURRENT_TIMESTAMP)`),
+    updatedAt: integer('updatedAt', { mode: 'timestamp' })
 });
 
 export const guildChannel = sqliteTable('GuildChannel', {
@@ -23,8 +23,8 @@ export const guildChannel = sqliteTable('GuildChannel', {
     rescheduleText: text('rescheduleText'),
     upcomingText: text('upcomingText'),
     liveText: text('liveText'),
-    createdAt: numeric('createdAt').default(sql`(CURRENT_TIMESTAMP)`),
-    updatedAt: numeric('updatedAt')
+    createdAt: integer('createdAt', { mode: 'timestamp' }).default(sql`(CURRENT_TIMESTAMP)`),
+    updatedAt: integer('updatedAt', { mode: 'timestamp' })
 });
 
 export const youtubeChannel = sqliteTable(
@@ -33,9 +33,9 @@ export const youtubeChannel = sqliteTable(
         id: text('id').primaryKey().notNull(),
         webhookId: text('webhookId').notNull(),
         webhookSecret: text('webhookSecret'),
-        webhookExpiresAt: numeric('webhookExpiresAt'),
-        createdAt: numeric('createdAt').default(sql`(CURRENT_TIMESTAMP)`),
-        updatedAt: numeric('updatedAt')
+        webhookExpiresAt: integer('webhookExpiresAt', { mode: 'timestamp' }),
+        createdAt: integer('createdAt', { mode: 'timestamp' }).default(sql`(CURRENT_TIMESTAMP)`),
+        updatedAt: integer('updatedAt', { mode: 'timestamp' })
     },
     (table) => {
         return {
@@ -51,16 +51,16 @@ export const youtubeVideo = sqliteTable('YoutubeVideo', {
         .references(() => youtubeChannel.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
     type: text('type').notNull(),
     title: text('title').notNull(),
-    scheduledAt: numeric('scheduledAt'),
-    livedAt: numeric('livedAt'),
-    deletedAt: numeric('deletedAt'),
-    publishNotifiedAt: numeric('publishNotifiedAt'),
-    scheduleNotifiedAt: numeric('scheduleNotifiedAt'),
-    rescheduleNotifiedAt: numeric('rescheduleNotifiedAt'),
-    upcomingNotifiedAt: numeric('upcomingNotifiedAt'),
-    liveNotifiedAt: numeric('liveNotifiedAt'),
-    createdAt: numeric('createdAt').default(sql`(CURRENT_TIMESTAMP)`),
-    updatedAt: numeric('updatedAt')
+    scheduledAt: integer('scheduledAt', { mode: 'timestamp' }),
+    livedAt: integer('livedAt', { mode: 'timestamp' }),
+    deletedAt: integer('deletedAt', { mode: 'timestamp' }),
+    publishNotifiedAt: integer('publishNotifiedAt', { mode: 'timestamp' }),
+    scheduleNotifiedAt: integer('scheduleNotifiedAt', { mode: 'timestamp' }),
+    rescheduleNotifiedAt: integer('rescheduleNotifiedAt', { mode: 'timestamp' }),
+    upcomingNotifiedAt: integer('upcomingNotifiedAt', { mode: 'timestamp' }),
+    liveNotifiedAt: integer('liveNotifiedAt', { mode: 'timestamp' }),
+    createdAt: integer('createdAt', { mode: 'timestamp' }).default(sql`(CURRENT_TIMESTAMP)`),
+    updatedAt: integer('updatedAt', { mode: 'timestamp' })
 });
 
 export const youtubeSubscription = sqliteTable(
@@ -82,8 +82,8 @@ export const youtubeSubscription = sqliteTable(
         rescheduleText: text('rescheduleText'),
         upcomingText: text('upcomingText'),
         liveText: text('liveText'),
-        createdAt: numeric('createdAt').default(sql`(CURRENT_TIMESTAMP)`),
-        updatedAt: numeric('updatedAt')
+        createdAt: integer('createdAt', { mode: 'timestamp' }).default(sql`(CURRENT_TIMESTAMP)`),
+        updatedAt: integer('updatedAt', { mode: 'timestamp' })
     },
     (table) => {
         return {

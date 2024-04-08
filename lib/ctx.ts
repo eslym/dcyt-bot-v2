@@ -12,3 +12,5 @@ export function createContext(): Context {
 export function ctxKey<T>(): ContextKey<T> {
     return Symbol() as any;
 }
+
+export type ContextValue<T> = T extends ContextKey<infer U> ? U : never;

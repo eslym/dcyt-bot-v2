@@ -5,11 +5,10 @@ import { kClient, kDb } from './symbols';
 import { createHmac } from 'crypto';
 import { convert } from 'xmlbuilder2';
 import { NotificationType, VideoType } from './enum';
-import { ucfirst, determineVideoType, determineNotificationType } from './utils';
-import type { TextBasedChannel } from 'discord.js';
-import { lang } from './lang';
-import Mustache from 'mustache';
+import { determineVideoType, determineNotificationType, publishNotification } from './utils';
 import { lock } from './cache';
+import * as t from './db/schema';
+import { sql } from 'drizzle-orm';
 
 export function topicUrl(topic: string) {
     const url = new URL('https://www.youtube.com/xml/feeds/videos.xml');
@@ -36,7 +35,11 @@ export async function handleWebSub(ctx: Context, req: Request): Promise<Response
     if (!match) return undefined;
     const db = ctx.get(kDb);
     const id = match[1];
-    const ytCh = await db.youtubeChannel.findUnique({ where: { webhookId: id } });
+    const ytCh = db
+        .select()
+        .from(t.youtubeChannel)
+        .where(sql`${t.youtubeChannel.webhookId} = ${id}`)
+        .get();
     if (!ytCh || !ytCh.webhookSecret) return undefined;
     if (req.method === 'POST') {
         if (!req.headers.has('x-hub-signature')) {
@@ -78,7 +81,13 @@ export async function handleWebSub(ctx: Context, req: Request): Promise<Response
             const lease = parseInt(url.searchParams.get('hub.lease_seconds')!);
             if (isNaN(lease) || lease < 300) return;
             const expires = new Date(Date.now() + lease * 1000);
-            await db.youtubeChannel.update({ where: { webhookId: id }, data: { webhookExpiresAt: expires } });
+            db.update(t.youtubeChannel)
+                .set({
+                    webhookExpiresAt: expires,
+                    updatedAt: new Date()
+                })
+                .where(sql`${t.youtubeChannel.webhookId} = ${id}`)
+                .run();
             const chData = await getChannelData(`https://youtube.com/channel/${ytCh.id}`);
             if (ytCh.webhookExpiresAt) {
                 console.log('[http]', `Renewing subscription for ${chData.metadata.title}`);
@@ -87,10 +96,14 @@ export async function handleWebSub(ctx: Context, req: Request): Promise<Response
             }
             return;
         }
-        await db.youtubeChannel.update({
-            where: { webhookId: id },
-            data: { webhookExpiresAt: null, webhookSecret: null }
-        });
+        db.update(t.youtubeChannel)
+            .set({
+                webhookExpiresAt: null,
+                webhookSecret: null,
+                updatedAt: new Date()
+            })
+            .where(sql`${t.youtubeChannel.webhookId} = ${id}`)
+            .run();
         const chData = await getChannelData(`https://youtube.com/channel/${ytCh.id}`);
         console.log('[http]', `Unsubscribed from ${chData.metadata.title}`);
     });
@@ -145,14 +158,13 @@ async function videoCallback(ctx: Context, ch: YoutubeChannel, body: Buffer) {
     if ('at:deleted-entry' in xml.feed) {
         const at = new Date(xml.feed['at:deleted-entry']['@when']);
         const videoId = xml.feed['at:deleted-entry']['@ref'].split(':').pop()!;
-        await db.youtubeVideo.updateMany({
-            where: {
-                id: videoId
-            },
-            data: {
-                deletedAt: at
-            }
-        });
+        db.update(t.youtubeVideo)
+            .set({
+                deletedAt: at,
+                updatedAt: new Date()
+            })
+            .where(sql`${t.youtubeVideo.id} = ${videoId}`)
+            .run();
         console.log('[http]', `Video deleted: ${xml.feed['at:deleted-entry'].link['@href']}`);
         return;
     }
@@ -164,10 +176,11 @@ async function videoCallback(ctx: Context, ch: YoutubeChannel, body: Buffer) {
         lock.delete(videoId);
         throw err;
     };
-    const videoRecord = await ctx
-        .get(kDb)
-        .youtubeVideo.findUnique({ where: { id: videoId } })
-        .catch(catchCase);
+    const videoRecord = db
+        .select()
+        .from(t.youtubeVideo)
+        .where(sql`${t.youtubeVideo.id} = ${videoId}`)
+        .get();
     const videoData = await getVideoData(videoId, false).catch(catchCase);
     const videoType = determineVideoType(videoData);
     if (!videoRecord) {
@@ -177,18 +190,18 @@ async function videoCallback(ctx: Context, ch: YoutubeChannel, body: Buffer) {
                 : videoData.schedule
                   ? NotificationType.SCHEDULE
                   : NotificationType.LIVE;
-        await db.youtubeVideo
-            .create({
-                data: {
-                    id: videoId,
-                    channelId: ch.id,
-                    title: videoData.details.title,
-                    type: videoType,
-                    scheduledAt: videoData.schedule,
-                    [`${notifyType.toLowerCase()}NotifiedAt`]: new Date()
-                }
+        db.insert(t.youtubeVideo)
+            .values({
+                id: videoId,
+                channelId: ch.id,
+                title: videoData.details.title,
+                type: videoType,
+                scheduledAt: videoData.schedule,
+                [`${notifyType.toLowerCase()}NotifiedAt`]: new Date(),
+                updatedAt: new Date()
             })
-            .finally(() => lock.delete(videoId));
+            .run();
+        lock.delete(videoId);
         if (videoData.details.isLiveContent && !videoData.details.isLive && !videoData.schedule) {
             console.log('[http]', 'Ignoring finished live content', { videoId, videoType });
             return;
@@ -202,38 +215,7 @@ async function videoCallback(ctx: Context, ch: YoutubeChannel, body: Buffer) {
             return;
         }
         console.log('[http]', 'Incoming notification', { videoId, videoType, notifyType });
-        const subscribtions = await db.youtubeSubscription.findMany({
-            where: {
-                youtubeChannelId: ch.id,
-                [`notify${ucfirst(notifyType)}`]: true
-            },
-            include: {
-                GuildChannel: {
-                    include: {
-                        Guild: true
-                    }
-                }
-            }
-        });
-        const client = ctx.get(kClient);
-        for (const sub of subscribtions) {
-            try {
-                const ch = (await client.channels.fetch(sub.guildChannelId)) as TextBasedChannel;
-                const field = `${notifyType.toLowerCase()}Text`;
-                const l = lang[sub.GuildChannel.Guild.language ?? 'en'];
-                const template = (sub as any)[field] ?? (sub.GuildChannel as any)[field] ?? l.NOTIFICATION[notifyType];
-                const data: any = {
-                    title: videoData.details.title,
-                    url: `https://youtube.com/watch?v=${videoId}`,
-                    channel: videoData.details.author,
-                    type: l.TYPE[videoType],
-                    timestamp: videoData.schedule ? Math.floor(videoData.schedule.valueOf() / 1000) : undefined
-                };
-                await ch.send(Mustache.render(template, data));
-            } catch (err) {
-                console.error('[http]', `Failed to notify ${sub.guildChannelId}`, { error: err });
-            }
-        }
+        publishNotification(ctx.get(kClient), db, videoType, videoData, notifyType);
         return;
     }
     if (videoRecord.type === VideoType.VIDEO) {
@@ -241,16 +223,14 @@ async function videoCallback(ctx: Context, ch: YoutubeChannel, body: Buffer) {
         return;
     }
     if (videoRecord.deletedAt) {
-        await db.youtubeVideo
-            .update({
-                where: {
-                    id: videoId
-                },
-                data: {
-                    deletedAt: null
-                }
+        db.update(t.youtubeVideo)
+            .set({
+                deletedAt: null,
+                updatedAt: new Date()
             })
-            .finally(() => lock.delete(videoId));
+            .where(sql`${t.youtubeVideo.id} = ${videoId}`)
+            .run();
+        lock.delete(videoId);
         return;
     }
     const notifyType = determineNotificationType(videoData, videoRecord);
@@ -258,53 +238,20 @@ async function videoCallback(ctx: Context, ch: YoutubeChannel, body: Buffer) {
         lock.delete(videoId);
         return;
     }
-    await db.youtubeVideo
-        .update({
-            where: {
-                id: videoId
-            },
-            data: {
-                title: videoData.details.title,
-                scheduledAt: videoData.schedule ?? null,
-                [`${notifyType.toLowerCase()}NotifiedAt`]: new Date()
-            }
+    db.update(t.youtubeVideo)
+        .set({
+            title: videoData.details.title,
+            scheduledAt: videoData.schedule ?? null,
+            [`${notifyType.toLowerCase()}NotifiedAt`]: new Date(),
+            updatedAt: new Date()
         })
-        .finally(() => lock.delete(videoId));
+        .where(sql`${t.youtubeVideo.id} = ${videoId}`)
+        .run();
+    lock.delete(videoId);
     console.log('[http]', 'Incoming notification', {
         videoId,
         videoType,
         notifyType
     });
-    const subscriptions = await db.youtubeSubscription.findMany({
-        where: {
-            youtubeChannelId: ch.id,
-            [`notify${ucfirst(notifyType)}`]: true
-        },
-        include: {
-            GuildChannel: {
-                include: {
-                    Guild: true
-                }
-            }
-        }
-    });
-    const client = ctx.get(kClient);
-    for (const sub of subscriptions) {
-        try {
-            const ch = (await client.channels.fetch(sub.guildChannelId)) as TextBasedChannel;
-            const field = `${notifyType.toLowerCase()}Text`;
-            const l = lang[sub.GuildChannel.Guild.language ?? 'en'];
-            const template = (sub as any)[field] ?? (sub.GuildChannel as any)[field] ?? l.NOTIFICATION[notifyType];
-            const data: any = {
-                title: videoData.details.title,
-                url: `https://youtube.com/watch?v=${videoId}`,
-                channel: videoData.details.author,
-                type: l.TYPE[videoRecord.type as VideoType],
-                timestamp: videoData.schedule ? Math.floor(videoData.schedule.valueOf() / 1000) : undefined
-            };
-            await ch.send(Mustache.render(template, data));
-        } catch (err) {
-            console.error('[http]', `Failed to notify ${sub.guildChannelId}`, { error: err });
-        }
-    }
+    publishNotification(ctx.get(kClient), db, videoType, videoData, notifyType);
 }

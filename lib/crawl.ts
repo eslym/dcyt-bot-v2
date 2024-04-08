@@ -257,10 +257,15 @@ function extractVideo(scripts: string[]): VideoCrawlResult {
 
     if (ytInitialPlayerResponse.playabilityStatus.liveStreamability) {
         let streamAbility = ytInitialPlayerResponse.playabilityStatus.liveStreamability.liveStreamabilityRenderer;
-        if (streamAbility.offlineSlate) {
-            result.schedule = new Date(
-                Number.parseInt(streamAbility.offlineSlate.liveStreamOfflineSlateRenderer.scheduledStartTime) * 1000
-            );
+        if (
+            streamAbility.offlineSlate &&
+            streamAbility.offlineSlate.liveStreamOfflineSlateRenderer.scheduledStartTime
+        ) {
+            const timestamp =
+                Number.parseInt(streamAbility.offlineSlate.liveStreamOfflineSlateRenderer.scheduledStartTime) * 1000;
+            if (!isNaN(timestamp)) {
+                result.schedule = new Date(timestamp);
+            }
         }
     }
 
