@@ -38,7 +38,6 @@ import {
     getChannelData,
     FetchError
 } from './crawl';
-import type { PrismaClient, YoutubeSubscription } from '@prisma/client';
 import { ucfirst } from './utils';
 import { postWebsub } from './websub';
 

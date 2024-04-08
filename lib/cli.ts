@@ -4,7 +4,6 @@ import cac from 'cac';
 import { createContext } from './ctx';
 import { kClient, kDb, kOptions, kServer } from './symbols';
 import { Client, IntentsBitField } from 'discord.js';
-import { PrismaClient } from '@prisma/client';
 import axios from 'axios';
 import fetchAdapter from '@haverstack/axios-fetch-adapter';
 import { startOptions } from './schema';
@@ -12,6 +11,9 @@ import { setupClient } from './client';
 import { handleWebSub } from './websub';
 import { cache } from './cache';
 import { setupCron } from './cron';
+import { Database } from 'bun:sqlite';
+import { drizzle } from 'drizzle-orm/bun-sqlite';
+import { resolve } from 'path';
 
 axios.defaults.adapter = fetchAdapter;
 
@@ -24,6 +26,7 @@ cli.command('', 'Run the bot')
     .option('-w, --websub [websub]', 'Websub origin', { default: env.WEBSUB_ORIGIN })
     .option('-h, --host [host]', 'Host to listen on', { default: env.HOST || '0.0.0.0' })
     .option('-p, --port [port]', 'Port to listen on', { default: env.PORT || '80' })
+    .option('-d, --database [database]', 'Database path', { default: resolve(env.DATABASE_URL || './db.sqlite') })
     .example('start -t <token> -w <websub> -h <host> -p <port>')
     .action(async (options) => {
         const opts = startOptions.safeParse(options);
@@ -39,8 +42,17 @@ cli.command('', 'Run the bot')
             process.exit(1);
         }
         const ctx = createContext();
+
+        const db = new Database(opts.data.database);
+
         ctx.set(kOptions, opts.data);
-        ctx.set(kDb, new PrismaClient());
+        ctx.set(
+            kDb,
+            drizzle(db, {
+                schema: await import('./db/schema')
+            })
+        );
+
         ctx.set(kClient, new Client({ intents: [IntentsBitField.Flags.Guilds], partials: [] }));
         ctx.set(
             kServer,
@@ -72,7 +84,7 @@ cli.command('', 'Run the bot')
             console.log('Program shutting down');
             ctx.get(kServer).stop();
             await ctx.get(kClient).destroy();
-            await ctx.get(kDb).$disconnect();
+            db.close();
             process.exit(0);
         };
 

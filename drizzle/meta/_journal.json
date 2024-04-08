@@ -1,0 +1,13 @@
+{
+  "version": "5",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1712552164336,
+      "tag": "0000_loud_skreet",
+      "breakpoints": true
+    }
+  ]
+}

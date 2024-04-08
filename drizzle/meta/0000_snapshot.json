@@ -1,0 +1,483 @@
+{
+  "id": "00000000-0000-0000-0000-000000000000",
+  "prevId": "",
+  "version": "5",
+  "dialect": "sqlite",
+  "tables": {
+    "Guild": {
+      "name": "Guild",
+      "columns": {
+        "id": {
+          "autoincrement": false,
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "language": {
+          "autoincrement": false,
+          "name": "language",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "publishText": {
+          "autoincrement": false,
+          "name": "publishText",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "scheduleText": {
+          "autoincrement": false,
+          "name": "scheduleText",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "rescheduleText": {
+          "autoincrement": false,
+          "name": "rescheduleText",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "upcomingText": {
+          "autoincrement": false,
+          "name": "upcomingText",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "liveText": {
+          "autoincrement": false,
+          "name": "liveText",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "createdAt": {
+          "default": "(CURRENT_TIMESTAMP)",
+          "autoincrement": false,
+          "name": "createdAt",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "updatedAt": {
+          "autoincrement": false,
+          "name": "updatedAt",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "compositePrimaryKeys": {},
+      "indexes": {},
+      "foreignKeys": {},
+      "uniqueConstraints": {}
+    },
+    "GuildChannel": {
+      "name": "GuildChannel",
+      "columns": {
+        "id": {
+          "autoincrement": false,
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "guildId": {
+          "autoincrement": false,
+          "name": "guildId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "publishText": {
+          "autoincrement": false,
+          "name": "publishText",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "scheduleText": {
+          "autoincrement": false,
+          "name": "scheduleText",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "rescheduleText": {
+          "autoincrement": false,
+          "name": "rescheduleText",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "upcomingText": {
+          "autoincrement": false,
+          "name": "upcomingText",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "liveText": {
+          "autoincrement": false,
+          "name": "liveText",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "createdAt": {
+          "default": "(CURRENT_TIMESTAMP)",
+          "autoincrement": false,
+          "name": "createdAt",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "updatedAt": {
+          "autoincrement": false,
+          "name": "updatedAt",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "compositePrimaryKeys": {},
+      "indexes": {},
+      "foreignKeys": {
+        "GuildChannel_guildId_Guild_id_fk": {
+          "name": "GuildChannel_guildId_Guild_id_fk",
+          "tableFrom": "GuildChannel",
+          "tableTo": "Guild",
+          "columnsFrom": ["guildId"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        }
+      },
+      "uniqueConstraints": {}
+    },
+    "YoutubeChannel": {
+      "name": "YoutubeChannel",
+      "columns": {
+        "id": {
+          "autoincrement": false,
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "webhookId": {
+          "autoincrement": false,
+          "name": "webhookId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "webhookSecret": {
+          "autoincrement": false,
+          "name": "webhookSecret",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "webhookExpiresAt": {
+          "autoincrement": false,
+          "name": "webhookExpiresAt",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "createdAt": {
+          "default": "(CURRENT_TIMESTAMP)",
+          "autoincrement": false,
+          "name": "createdAt",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "updatedAt": {
+          "autoincrement": false,
+          "name": "updatedAt",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "compositePrimaryKeys": {},
+      "indexes": {
+        "YoutubeChannel_webhookId_key": {
+          "name": "YoutubeChannel_webhookId_key",
+          "columns": ["webhookId"],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {},
+      "uniqueConstraints": {}
+    },
+    "YoutubeVideo": {
+      "name": "YoutubeVideo",
+      "columns": {
+        "id": {
+          "autoincrement": false,
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "channelId": {
+          "autoincrement": false,
+          "name": "channelId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "type": {
+          "autoincrement": false,
+          "name": "type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "title": {
+          "autoincrement": false,
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "scheduledAt": {
+          "autoincrement": false,
+          "name": "scheduledAt",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "livedAt": {
+          "autoincrement": false,
+          "name": "livedAt",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "deletedAt": {
+          "autoincrement": false,
+          "name": "deletedAt",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "publishNotifiedAt": {
+          "autoincrement": false,
+          "name": "publishNotifiedAt",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "scheduleNotifiedAt": {
+          "autoincrement": false,
+          "name": "scheduleNotifiedAt",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "rescheduleNotifiedAt": {
+          "autoincrement": false,
+          "name": "rescheduleNotifiedAt",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "upcomingNotifiedAt": {
+          "autoincrement": false,
+          "name": "upcomingNotifiedAt",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "liveNotifiedAt": {
+          "autoincrement": false,
+          "name": "liveNotifiedAt",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "createdAt": {
+          "default": "(CURRENT_TIMESTAMP)",
+          "autoincrement": false,
+          "name": "createdAt",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "updatedAt": {
+          "autoincrement": false,
+          "name": "updatedAt",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "compositePrimaryKeys": {},
+      "indexes": {},
+      "foreignKeys": {
+        "YoutubeVideo_channelId_YoutubeChannel_id_fk": {
+          "name": "YoutubeVideo_channelId_YoutubeChannel_id_fk",
+          "tableFrom": "YoutubeVideo",
+          "tableTo": "YoutubeChannel",
+          "columnsFrom": ["channelId"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        }
+      },
+      "uniqueConstraints": {}
+    },
+    "YoutubeSubscription": {
+      "name": "YoutubeSubscription",
+      "columns": {
+        "youtubeChannelId": {
+          "autoincrement": false,
+          "name": "youtubeChannelId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "guildChannelId": {
+          "autoincrement": false,
+          "name": "guildChannelId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "notifyPublish": {
+          "default": true,
+          "autoincrement": false,
+          "name": "notifyPublish",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "notifySchedule": {
+          "default": true,
+          "autoincrement": false,
+          "name": "notifySchedule",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "notifyReschedule": {
+          "default": true,
+          "autoincrement": false,
+          "name": "notifyReschedule",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "notifyUpcoming": {
+          "default": true,
+          "autoincrement": false,
+          "name": "notifyUpcoming",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "notifyLive": {
+          "default": true,
+          "autoincrement": false,
+          "name": "notifyLive",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "publishText": {
+          "autoincrement": false,
+          "name": "publishText",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "scheduleText": {
+          "autoincrement": false,
+          "name": "scheduleText",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "rescheduleText": {
+          "autoincrement": false,
+          "name": "rescheduleText",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "upcomingText": {
+          "autoincrement": false,
+          "name": "upcomingText",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "liveText": {
+          "autoincrement": false,
+          "name": "liveText",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "createdAt": {
+          "default": "(CURRENT_TIMESTAMP)",
+          "autoincrement": false,
+          "name": "createdAt",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "updatedAt": {
+          "autoincrement": false,
+          "name": "updatedAt",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "compositePrimaryKeys": {
+        "YoutubeSubscription_guildChannelId_youtubeChannelId_pk": {
+          "columns": ["guildChannelId", "youtubeChannelId"],
+          "name": "YoutubeSubscription_guildChannelId_youtubeChannelId_pk"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "YoutubeSubscription_guildChannelId_GuildChannel_id_fk": {
+          "name": "YoutubeSubscription_guildChannelId_GuildChannel_id_fk",
+          "tableFrom": "YoutubeSubscription",
+          "tableTo": "GuildChannel",
+          "columnsFrom": ["guildChannelId"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        },
+        "YoutubeSubscription_youtubeChannelId_YoutubeChannel_id_fk": {
+          "name": "YoutubeSubscription_youtubeChannelId_YoutubeChannel_id_fk",
+          "tableFrom": "YoutubeSubscription",
+          "tableTo": "YoutubeChannel",
+          "columnsFrom": ["youtubeChannelId"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        }
+      },
+      "uniqueConstraints": {}
+    }
+  },
+  "enums": {},
+  "_meta": {
+    "schemas": {},
+    "tables": {},
+    "columns": {}
+  }
+}

@@ -1,5 +1,5 @@
-import type { YoutubeVideo } from '@prisma/client';
 import type { VideoCrawlResult } from './crawl';
+import type { YoutubeVideo } from './db/types';
 import { NotificationType, VideoType } from './enum';
 
 export function ucfirst(str: string) {
@@ -27,7 +27,8 @@ export function determineNotificationType(
         return;
     }
     const schedule = videoData.schedule.valueOf();
-    if (schedule !== videoRecord.scheduledAt?.valueOf()) {
+    const oldSchedule = videoRecord.scheduledAt ? new Date(videoRecord.scheduledAt) : undefined;
+    if (schedule !== oldSchedule?.valueOf()) {
         return NotificationType.RESCHEDULE;
     }
     const now = Date.now();

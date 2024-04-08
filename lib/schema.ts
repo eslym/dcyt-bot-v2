@@ -11,7 +11,8 @@ export const startOptions = z.object({
         .number({ required_error: 'Port must be present' })
         .int('Port must be an integer')
         .min(1, 'Port must be a positive integer')
-        .max(65535, 'Port must be less than 65536')
+        .max(65535, 'Port must be less than 65536'),
+    database: z.string({ required_error: 'Database path must be present' }).min(1, 'Database path must not be empty')
 });
 
 export type StartOptions = z.infer<typeof startOptions>;
