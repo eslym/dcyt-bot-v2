@@ -1,0 +1,1 @@
+ALTER TABLE `YoutubeVideo` DROP COLUMN `livedAt`;

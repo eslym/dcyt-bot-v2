@@ -9,8 +9,8 @@ export const guild = sqliteTable('Guild', {
     rescheduleText: text('rescheduleText'),
     upcomingText: text('upcomingText'),
     liveText: text('liveText'),
-    createdAt: integer('createdAt', { mode: 'timestamp' }).default(sql`(CURRENT_TIMESTAMP)`),
-    updatedAt: integer('updatedAt', { mode: 'timestamp' })
+    createdAt: integer('createdAt', { mode: 'timestamp_ms' }).default(sql`(CURRENT_TIMESTAMP)`),
+    updatedAt: integer('updatedAt', { mode: 'timestamp_ms' })
 });
 
 export const guildChannel = sqliteTable('GuildChannel', {
@@ -23,8 +23,8 @@ export const guildChannel = sqliteTable('GuildChannel', {
     rescheduleText: text('rescheduleText'),
     upcomingText: text('upcomingText'),
     liveText: text('liveText'),
-    createdAt: integer('createdAt', { mode: 'timestamp' }).default(sql`(CURRENT_TIMESTAMP)`),
-    updatedAt: integer('updatedAt', { mode: 'timestamp' })
+    createdAt: integer('createdAt', { mode: 'timestamp_ms' }).default(sql`(CURRENT_TIMESTAMP)`),
+    updatedAt: integer('updatedAt', { mode: 'timestamp_ms' })
 });
 
 export const youtubeChannel = sqliteTable(
@@ -33,9 +33,9 @@ export const youtubeChannel = sqliteTable(
         id: text('id').primaryKey().notNull(),
         webhookId: text('webhookId').notNull(),
         webhookSecret: text('webhookSecret'),
-        webhookExpiresAt: integer('webhookExpiresAt', { mode: 'timestamp' }),
-        createdAt: integer('createdAt', { mode: 'timestamp' }).default(sql`(CURRENT_TIMESTAMP)`),
-        updatedAt: integer('updatedAt', { mode: 'timestamp' })
+        webhookExpiresAt: integer('webhookExpiresAt', { mode: 'timestamp_ms' }),
+        createdAt: integer('createdAt', { mode: 'timestamp_ms' }).default(sql`(CURRENT_TIMESTAMP)`),
+        updatedAt: integer('updatedAt', { mode: 'timestamp_ms' })
     },
     (table) => {
         return {
@@ -51,16 +51,15 @@ export const youtubeVideo = sqliteTable('YoutubeVideo', {
         .references(() => youtubeChannel.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
     type: text('type').notNull(),
     title: text('title').notNull(),
-    scheduledAt: integer('scheduledAt', { mode: 'timestamp' }),
-    livedAt: integer('livedAt', { mode: 'timestamp' }),
-    deletedAt: integer('deletedAt', { mode: 'timestamp' }),
-    publishNotifiedAt: integer('publishNotifiedAt', { mode: 'timestamp' }),
-    scheduleNotifiedAt: integer('scheduleNotifiedAt', { mode: 'timestamp' }),
-    rescheduleNotifiedAt: integer('rescheduleNotifiedAt', { mode: 'timestamp' }),
-    upcomingNotifiedAt: integer('upcomingNotifiedAt', { mode: 'timestamp' }),
-    liveNotifiedAt: integer('liveNotifiedAt', { mode: 'timestamp' }),
-    createdAt: integer('createdAt', { mode: 'timestamp' }).default(sql`(CURRENT_TIMESTAMP)`),
-    updatedAt: integer('updatedAt', { mode: 'timestamp' })
+    scheduledAt: integer('scheduledAt', { mode: 'timestamp_ms' }),
+    deletedAt: integer('deletedAt', { mode: 'timestamp_ms' }),
+    publishNotifiedAt: integer('publishNotifiedAt', { mode: 'timestamp_ms' }),
+    scheduleNotifiedAt: integer('scheduleNotifiedAt', { mode: 'timestamp_ms' }),
+    rescheduleNotifiedAt: integer('rescheduleNotifiedAt', { mode: 'timestamp_ms' }),
+    upcomingNotifiedAt: integer('upcomingNotifiedAt', { mode: 'timestamp_ms' }),
+    liveNotifiedAt: integer('liveNotifiedAt', { mode: 'timestamp_ms' }),
+    createdAt: integer('createdAt', { mode: 'timestamp_ms' }).default(sql`(CURRENT_TIMESTAMP)`),
+    updatedAt: integer('updatedAt', { mode: 'timestamp_ms' })
 });
 
 export const youtubeSubscription = sqliteTable(
@@ -82,8 +81,8 @@ export const youtubeSubscription = sqliteTable(
         rescheduleText: text('rescheduleText'),
         upcomingText: text('upcomingText'),
         liveText: text('liveText'),
-        createdAt: integer('createdAt', { mode: 'timestamp' }).default(sql`(CURRENT_TIMESTAMP)`),
-        updatedAt: integer('updatedAt', { mode: 'timestamp' })
+        createdAt: integer('createdAt', { mode: 'timestamp_ms' }).default(sql`(CURRENT_TIMESTAMP)`),
+        updatedAt: integer('updatedAt', { mode: 'timestamp_ms' })
     },
     (table) => {
         return {
