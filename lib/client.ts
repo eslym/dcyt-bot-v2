@@ -45,6 +45,8 @@ import { count, sql } from 'drizzle-orm';
 import { getGuildData, upsertGuild } from './db/utils';
 import { createId } from '@paralleldrive/cuid2';
 import type { YoutubeSubscription } from './db/types';
+import { alias } from 'drizzle-orm/sqlite-core';
+import { randomBytes } from 'crypto';
 
 Mustache.escape = function escapeMarkdown(text) {
     const markdownSpecialChars = /([\\`*_\[\]\-~<])/g;
@@ -161,7 +163,7 @@ async function checkSubs(ctx: Context, channel: string) {
         .get();
     if (!ch) return;
     if (ch.Subscriptions && !ch.webhookSecret) {
-        const secret = Buffer.from(channel).toString('base64');
+        const secret = randomBytes(24).toString('base64');
         db.update(t.youtubeChannel)
             .set({ webhookSecret: secret, updatedAt: new Date() })
             .where(sql`${t.youtubeChannel.id} = ${channel}`)
@@ -606,16 +608,24 @@ const selectMenuHandlers: Record<string, (ctx: Context, interaction: StringSelec
             return getGuildId(ctx, interaction)
                 .then(async (guildId) => {
                     const guildData = getGuildData(db, guildId);
-                    const sub = db
-                        .select()
-                        .from(t.youtubeSubscription)
-                        .where(
-                            sql`${t.youtubeSubscription.guildChannelId} = ${targetChannel} AND ${t.youtubeSubscription.youtubeChannelId} = ${source}`
-                        )
-                        .innerJoin(t.guildChannel, sql`${t.youtubeSubscription.guildChannelId} = ${t.guildChannel.id}`)
-                        .get()!;
-                    if (!sub) return;
+
                     const category = interaction.values[0];
+                    const field = `${category.toLowerCase()}Text`;
+
+                    const subs = alias(t.youtubeSubscription, 'sub');
+                    const chs = alias(t.guildChannel, 'ch');
+
+                    const sub = db
+                        .select({
+                            [field]: (subs as any)[field],
+                            [field + 'Channel']: sql<string>`${(chs as any)[field]}`.as(field + 'Channel')
+                        })
+                        .from(subs)
+                        .where(sql`${subs.guildChannelId} = ${targetChannel} AND ${subs.youtubeChannelId} = ${source}`)
+                        .innerJoin(chs, sql`${subs.guildChannelId} = ${chs.id}`)
+                        .get()!;
+
+                    if (!sub) return;
                     const l = lang[guildData.language ?? 'en'];
                     await interaction.showModal(
                         new ModalBuilder()
@@ -628,15 +638,13 @@ const selectMenuHandlers: Record<string, (ctx: Context, interaction: StringSelec
                                         .setStyle(TextInputStyle.Paragraph)
                                         .setCustomId(`template`)
                                         .setPlaceholder(
-                                            (sub.GuildChannel as any)[`${category.toLowerCase()}Text`] ??
-                                                (guildData as any)[`${category.toLowerCase()}Text`] ??
+                                            sub[field + 'Channel'] ??
+                                                (guildData as any)[field] ??
                                                 (l.NOTIFICATION as any)[category]
                                         )
                                         .setMinLength(0)
                                         .setMaxLength(1000)
-                                        .setValue(
-                                            (sub.YoutubeSubscription as any)[`${category.toLowerCase()}Text`] ?? ''
-                                        )
+                                        .setValue(sub[field] ?? '')
                                         .setRequired(false)
                                 )
                             )
@@ -924,7 +932,9 @@ export function setupClient(ctx: Context) {
             name: guild.name
         });
         const chs = db
-            .select()
+            .select({
+                id: t.youtubeChannel.id
+            })
             .from(t.youtubeChannel)
             .innerJoin(t.youtubeSubscription, sql`${t.youtubeChannel.id} = ${t.youtubeSubscription.youtubeChannelId}`)
             .innerJoin(t.guildChannel, sql`${t.youtubeSubscription.guildChannelId} = ${t.guildChannel.id}`)
@@ -934,7 +944,7 @@ export function setupClient(ctx: Context) {
             .where(sql`${t.guild.id} = ${guild.id}`)
             .run();
         for (const ch of chs) {
-            await checkSubs(ctx, ch.YoutubeChannel.id).catch(console.error);
+            await checkSubs(ctx, ch.id).catch(console.error);
         }
     });
 

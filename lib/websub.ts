@@ -1,4 +1,3 @@
-import type { YoutubeChannel } from '@prisma/client';
 import { getChannelData, getVideoData } from './crawl';
 import type { Context } from './ctx';
 import { kClient, kDb } from './symbols';
@@ -9,6 +8,7 @@ import { determineVideoType, determineNotificationType, publishNotification } fr
 import { lock } from './cache';
 import * as t from './db/schema';
 import { sql } from 'drizzle-orm';
+import type { YoutubeChannel } from './db/types';
 
 export function topicUrl(topic: string) {
     const url = new URL('https://www.youtube.com/xml/feeds/videos.xml');

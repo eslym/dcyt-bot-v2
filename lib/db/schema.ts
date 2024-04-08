@@ -1,4 +1,4 @@
-import { sqliteTable, text, numeric, uniqueIndex, primaryKey, integer } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, uniqueIndex, primaryKey, integer } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 
 export const guild = sqliteTable('Guild', {
@@ -72,11 +72,11 @@ export const youtubeSubscription = sqliteTable(
         guildChannelId: text('guildChannelId')
             .notNull()
             .references(() => guildChannel.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
-        notifyPublish: numeric('notifyPublish').default('true').notNull(),
-        notifySchedule: numeric('notifySchedule').default('true').notNull(),
-        notifyReschedule: numeric('notifyReschedule').default('true').notNull(),
-        notifyUpcoming: numeric('notifyUpcoming').default('true').notNull(),
-        notifyLive: numeric('notifyLive').default('true').notNull(),
+        notifyPublish: integer('notifyPublish', { mode: 'boolean' }).default(true).notNull(),
+        notifySchedule: integer('notifySchedule', { mode: 'boolean' }).default(true).notNull(),
+        notifyReschedule: integer('notifyReschedule', { mode: 'boolean' }).default(true).notNull(),
+        notifyUpcoming: integer('notifyUpcoming', { mode: 'boolean' }).default(true).notNull(),
+        notifyLive: integer('notifyLive', { mode: 'boolean' }).default(true).notNull(),
         publishText: text('publishText'),
         scheduleText: text('scheduleText'),
         rescheduleText: text('rescheduleText'),

@@ -63,8 +63,8 @@ export async function publishNotification(
             channelId: ch.id,
             language: g.language,
             [field]: sub[field],
-            [field + 'Channel']: ch[field],
-            [field + 'Guild']: g[field]
+            [field + 'Channel']: sql<string>`${ch[field]}`.as(field + 'Channel'),
+            [field + 'Guild']: sql<string>`${g[field]}`.as(field + 'Guild')
         })
         .from(sub)
         .where(
