@@ -1,5 +1,5 @@
 import { chmodSync } from 'fs';
-import { ImportMarkdown, UseBrowserAxios } from '../lib/plugins';
+import { ImportMarkdown } from '../lib/plugins';
 import pkg from '../package.json';
 import { $ } from 'bun';
 import { resolve } from 'path';
@@ -39,7 +39,7 @@ const bundle = await Bun.build({
     minify: {
         syntax: true
     },
-    plugins: [UseBrowserAxios, ImportMarkdown],
+    plugins: [ImportMarkdown],
     external: Object.keys((pkg as any).dependencies ?? {}),
     define: {
         'process.env.MIGRATIONS_FOLDER': '"drizzle"'
