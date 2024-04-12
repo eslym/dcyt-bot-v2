@@ -4,8 +4,6 @@ import cac from 'cac';
 import { createContext } from './ctx';
 import { kClient, kDb, kOptions, kServer } from './symbols';
 import { Client, IntentsBitField } from 'discord.js';
-import axios from 'axios';
-import fetchAdapter from '@haverstack/axios-fetch-adapter';
 import { startOptions } from './schema';
 import { setupClient } from './client';
 import { handleWebSub } from './websub';
@@ -15,8 +13,6 @@ import { Database } from 'bun:sqlite';
 import { drizzle } from 'drizzle-orm/bun-sqlite';
 import { migrate } from 'drizzle-orm/bun-sqlite/migrator';
 import { resolve } from 'path';
-
-axios.defaults.adapter = fetchAdapter;
 
 const env = Bun.env;
 

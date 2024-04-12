@@ -69,6 +69,7 @@ const helpText: Record<string, string> = {
     'zh-TW': twHelp
 };
 
+//MARK: Commands Definitions
 const guildCommands = [
     new SlashCommandBuilder()
         .setName('config')
@@ -345,6 +346,7 @@ async function listSubscriptionInteraction(
     });
 }
 
+//MARK: Command Handlers
 const commandHandlers: Record<string, (ctx: Context, interaction: ChatInputCommandInteraction) => Promise<unknown>> = {
     async config(ctx, interaction) {
         return getGuildId(ctx, interaction)
@@ -452,7 +454,8 @@ const commandHandlers: Record<string, (ctx: Context, interaction: ChatInputComma
                 const guild = getGuildData(db, guildId);
                 await interaction.reply({
                     content: helpText[guild.language ?? 'en'],
-                    ephemeral: true
+                    ephemeral: true,
+                    embeds: []
                 });
             })
             .catch((err) => {

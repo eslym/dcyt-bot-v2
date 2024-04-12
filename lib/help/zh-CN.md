@@ -19,3 +19,13 @@
 
 > ### /help
 > 显示此帮助消息。
+
+## 模板
+
+通知文本使用mustache格式来定制模板，一下提供一些可使用的变量。
+
+- `{{title}}`：影片的标题。
+- `{{{url}}}`：影片的链接（必须包含在文本中），使用`{{{`和`}}}`以避免url被转义。
+- `{{type}}`：影片的类型，用于区分直播和首播。
+- `{{channel}}`：YouTube频道名称。
+- `{{timestamp}}`：计划的时间戳，当有直播或首播的计划时可用。此时间戳的格式为unix时间戳，可用于[Discord的时间戳格式](<https://discord.com/developers/docs/reference#message-formatting-timestamp-styles>)，例如：`<t:{{timestamp}}:R>`。

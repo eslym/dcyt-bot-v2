@@ -19,3 +19,12 @@ This bot sends a notification to a discord channel when a new video is uploaded 
 
 > ### /help
 > Show this help message.
+
+## Templates
+
+The notification text uses mustache for templating, there are few available variable to use.
+- `{{title}}`: The title of the video.
+- `{{{url}}}`: The link to the video (must be included in text), use `{{{` and `}}}` to avoid url being escaped.
+- `{{type}}`: The type of video, for diffrenciate live streaming and premiere.
+- `{{channel}}`: The YouTube channel name.
+- `{{timestamp}}`: The timestamp of schedule, available when there is a schedule. this is designed to use with [discord timestamp format](<https://discord.com/developers/docs/reference#message-formatting-timestamp-styles>), ex: `<t:{{timestamp}}:R>`.
