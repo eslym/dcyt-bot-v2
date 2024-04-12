@@ -9,10 +9,8 @@
     "@types/bun": "latest",
     "@types/mustache": "^4.2.5",
     "@types/node-cron": "^3.0.11",
-    "better-sqlite3": "^9.4.5",
     "cac": "^6.7.14",
     "discord.js": "^14.14.1",
-    "drizzle-kit": "^0.20.14",
     "json5": "^2.2.3",
     "mustache": "^4.2.0",
     "node-cron": "^3.0.3",
@@ -25,6 +23,10 @@
   },
   "peerDependencies": {
     "typescript": "^5.0.0"
+  },
+  "optionalDependencies": {
+    "better-sqlite3": "^9.4.5",
+    "drizzle-kit": "^0.20.14"
   },
   "type": "module"
 }
