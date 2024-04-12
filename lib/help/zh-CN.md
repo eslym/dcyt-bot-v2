@@ -29,3 +29,5 @@
 - `{{type}}`：影片的类型，用于区分直播和首播。
 - `{{channel}}`：YouTube频道名称。
 - `{{timestamp}}`：计划的时间戳，当有直播或首播的计划时可用。此时间戳的格式为unix时间戳，可用于[Discord的时间戳格式](<https://discord.com/developers/docs/reference#message-formatting-timestamp-styles>)，例如：`<t:{{timestamp}}:R>`。
+
+[_机器人源代码_](<https://github.com/eslym/dcyt-bot-v2>)

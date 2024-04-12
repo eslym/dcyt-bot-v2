@@ -1,4 +1,7 @@
-# discord-youtube-bot
+# Discord Youtube Notification Bot v2
+
+A bot to receive notification from youtube when there is any update. Notification received via
+[Google Pubsubhubbub hub](https://pubsubhubbub.appspot.com/), live-streaming details are fetched by crawling youtube page. All operations can be done by application command.
 
 To install dependencies:
 
@@ -11,8 +14,6 @@ To run:
 ```bash
 bun run index.ts
 ```
-
-This project was created using `bun init` in bun v1.0.36. [Bun](https://bun.sh) is a fast all-in-one JavaScript runtime.
 
 ## Requirements
 

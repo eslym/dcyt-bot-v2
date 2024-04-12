@@ -28,3 +28,5 @@ The notification text uses mustache for templating, there are few available vari
 - `{{type}}`: The type of video, for diffrenciate live streaming and premiere.
 - `{{channel}}`: The YouTube channel name.
 - `{{timestamp}}`: The timestamp of schedule, available when there is a schedule. this is designed to use with [discord timestamp format](<https://discord.com/developers/docs/reference#message-formatting-timestamp-styles>), ex: `<t:{{timestamp}}:R>`.
+
+[_Bot Source Code_](<https://github.com/eslym/dcyt-bot-v2>)
