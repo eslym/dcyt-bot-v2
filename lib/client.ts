@@ -39,14 +39,13 @@ import {
     FetchError
 } from './crawl';
 import { ucfirst } from './utils';
-import { postWebsub } from './websub';
+import { checkSubs } from './websub';
 import * as t from './db/schema';
 import { count, sql } from 'drizzle-orm';
 import { getGuildData, upsertGuild } from './db/utils';
 import { createId } from '@paralleldrive/cuid2';
 import type { YoutubeSubscription } from './db/types';
 import { alias } from 'drizzle-orm/sqlite-core';
-import { randomBytes } from 'crypto';
 
 Mustache.escape = function escapeMarkdown(text) {
     const markdownSpecialChars = /([\\`*_\[\]\-~<])/g;
@@ -142,41 +141,6 @@ const guildCommands = [
         .setDescriptionLocalization('zh-CN', lang['zh-CN'].COMMAND.HELP.DESCRIPTION)
         .setDescriptionLocalization('zh-TW', lang['zh-TW'].COMMAND.HELP.DESCRIPTION)
 ];
-
-const env = process.env;
-
-async function checkSubs(ctx: Context, channel: string) {
-    if (env.DEV_WEBSUB_DISABLED === 'true') return;
-    const db = ctx.get(kDb);
-    const opts = ctx.get(kOptions);
-    const ch = db
-        .select({
-            id: t.youtubeChannel.id,
-            webhookId: t.youtubeChannel.webhookId,
-            webhookSecret: t.youtubeChannel.webhookSecret,
-            Subscriptions: count(t.youtubeSubscription)
-        })
-        .from(t.youtubeChannel)
-        .where(sql`${t.youtubeChannel.id} = ${channel}`)
-        .innerJoin(t.youtubeSubscription, sql`${t.youtubeChannel.id} = ${t.youtubeSubscription.youtubeChannelId}`)
-        .groupBy(t.youtubeChannel.id)
-        .get();
-    if (!ch) return;
-    if (ch.Subscriptions && !ch.webhookSecret) {
-        const secret = randomBytes(24).toString('base64');
-        db.update(t.youtubeChannel)
-            .set({ webhookSecret: secret, updatedAt: new Date() })
-            .where(sql`${t.youtubeChannel.id} = ${channel}`)
-            .run();
-        const callback = new URL(`./websub/${ch.webhookId}`, opts.websub);
-        await postWebsub('subscribe', channel, secret, callback.toString());
-        return;
-    }
-    if (!ch.Subscriptions && ch.webhookSecret) {
-        const callback = new URL(`./websub/${ch.webhookId}`, opts.websub);
-        await postWebsub('unsubscribe', channel, ch.webhookSecret, callback.toString());
-    }
-}
 
 async function getGuildId(
     _: Context,

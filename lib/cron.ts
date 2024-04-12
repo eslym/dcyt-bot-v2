@@ -1,17 +1,19 @@
 import type { Context } from './ctx';
-import { kClient, kDb } from './symbols';
+import { kClient, kDb, kOptions } from './symbols';
 import cron from 'node-cron';
-import { postWebsub, topicUrl } from './websub';
+import { checkSubs, postWebsub, topicUrl } from './websub';
 import { VideoType } from './enum';
 import { lock } from './cache';
 import { getVideoData } from './crawl';
 import { determineNotificationType, publishNotification } from './utils';
 import * as t from './db/schema';
 import { sql } from 'drizzle-orm';
+import { randomBytes } from 'crypto';
 
 export function setupCron(ctx: Context) {
     const db = ctx.get(kDb);
     const client = ctx.get(kClient);
+    const opts = ctx.get(kOptions);
 
     cron.schedule('*/15 * * * *', async () => {
         const chs = db
@@ -23,17 +25,20 @@ export function setupCron(ctx: Context) {
             })
             .from(t.youtubeChannel)
             .where(
-                sql`${t.youtubeChannel.webhookSecret} IS NOT NULL AND (${t.youtubeChannel.webhookExpiresAt} IS NULL OR ${t.youtubeChannel.webhookExpiresAt} <= ${new Date(Date.now() - 24 * 3600000)})`
+                sql`${t.youtubeChannel.webhookSecret} IS NOT NULL AND (${t.youtubeChannel.webhookExpiresAt} IS NULL OR ${t.youtubeChannel.webhookExpiresAt} <= ${Date.now() + 4 * 3600000})`
             )
             .all();
         if (!chs.length) return;
         for (const ch of chs) {
-            const res = await postWebsub(
-                'subscribe',
-                ch.id,
-                ch.webhookSecret!,
-                'https://www.youtube.com/xml/feeds/videos.xml'
-            );
+            ch.webhookSecret = randomBytes(24).toString('base64');
+            db.update(t.youtubeChannel)
+                .set({
+                    webhookSecret: ch.webhookSecret
+                })
+                .where(sql`${t.youtubeChannel.id} = ${ch.id}`)
+                .run();
+            const callback = new URL(`./websub/${ch.webhookId}`, opts.websub);
+            const res = await postWebsub('subscribe', ch.id, ch.webhookSecret!, callback.toString());
             if (!res.ok) {
                 console.error('[cron]', `Failed to subscribe to ${topicUrl(ch.id)}`, {
                     status: res.status,

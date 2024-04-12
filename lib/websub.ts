@@ -1,14 +1,15 @@
 import { getChannelData, getVideoData } from './crawl';
 import type { Context } from './ctx';
-import { kClient, kDb } from './symbols';
+import { kClient, kDb, kOptions } from './symbols';
 import { createHmac } from 'crypto';
 import { convert } from 'xmlbuilder2';
 import { NotificationType, VideoType } from './enum';
 import { determineVideoType, determineNotificationType, publishNotification } from './utils';
 import { lock } from './cache';
 import * as t from './db/schema';
-import { sql } from 'drizzle-orm';
+import { count, sql } from 'drizzle-orm';
 import type { YoutubeChannel } from './db/types';
+import { randomBytes } from 'crypto';
 
 export function topicUrl(topic: string) {
     const url = new URL('https://www.youtube.com/xml/feeds/videos.xml');
@@ -23,6 +24,7 @@ export async function postWebsub(mode: 'subscribe' | 'unsubscribe', topic: strin
     data.set('hub.mode', mode);
     data.set('hub.topic', topicUrl(topic));
     data.set('hub.secret', secret);
+    data.set('hub.verify', 'async');
     return fetch(url.toString(), { method: 'POST', body: data });
 }
 
@@ -90,7 +92,7 @@ export async function handleWebSub(ctx: Context, req: Request): Promise<Response
                 .run();
             const chData = await getChannelData(`https://youtube.com/channel/${ytCh.id}`);
             if (ytCh.webhookExpiresAt) {
-                console.log('[http]', `Renewing subscription for ${chData.metadata.title}`);
+                console.log('[http]', `Subscription for ${chData.metadata.title} renewed.`);
             } else {
                 console.log('[http]', `Subscribed to ${chData.metadata.title}`);
             }
@@ -254,4 +256,43 @@ async function videoCallback(ctx: Context, ch: YoutubeChannel, body: Buffer) {
         notifyType
     });
     publishNotification(ctx.get(kClient), db, videoType, videoData, notifyType);
+}
+
+const env = Bun.env;
+
+export async function checkSubs(ctx: Context, channel: string) {
+    if (env.DEV_WEBSUB_DISABLED === 'true') return;
+    const db = ctx.get(kDb);
+    const opts = ctx.get(kOptions);
+    const ch = db
+        .select({
+            id: t.youtubeChannel.id,
+            webhookId: t.youtubeChannel.webhookId,
+            webhookSecret: t.youtubeChannel.webhookSecret
+        })
+        .from(t.youtubeChannel)
+        .where(sql`${t.youtubeChannel.id} = ${channel}`)
+        .get();
+    const subs = db
+        .select({
+            count: count()
+        })
+        .from(t.youtubeSubscription)
+        .where(sql`${t.youtubeSubscription.youtubeChannelId} = ${channel}`)
+        .get()!;
+    if (!ch) return;
+    if (subs.count && !ch.webhookSecret) {
+        const secret = randomBytes(24).toString('base64');
+        db.update(t.youtubeChannel)
+            .set({ webhookSecret: secret, updatedAt: new Date() })
+            .where(sql`${t.youtubeChannel.id} = ${channel}`)
+            .run();
+        const callback = new URL(`./websub/${ch.webhookId}`, opts.websub);
+        await postWebsub('subscribe', channel, secret, callback.toString());
+        return;
+    }
+    if (!subs.count && ch.webhookSecret) {
+        const callback = new URL(`./websub/${ch.webhookId}`, opts.websub);
+        await postWebsub('unsubscribe', channel, ch.webhookSecret, callback.toString());
+    }
 }
