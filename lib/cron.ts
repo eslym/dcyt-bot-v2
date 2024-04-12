@@ -1,7 +1,7 @@
 import type { Context } from './ctx';
 import { kClient, kDb, kOptions } from './symbols';
 import cron from 'node-cron';
-import { checkSubs, postWebsub, topicUrl } from './websub';
+import { postWebsub, topicUrl } from './websub';
 import { VideoType } from './enum';
 import { lock } from './cache';
 import { getVideoData } from './crawl';
