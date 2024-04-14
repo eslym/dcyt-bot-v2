@@ -15,6 +15,7 @@ import { migrate } from 'drizzle-orm/bun-sqlite/migrator';
 import { resolve } from 'path';
 import { heapStats } from 'bun:jsc';
 import * as t from './db/schema';
+import { sql } from 'drizzle-orm';
 
 const env = Bun.env;
 
@@ -57,27 +58,15 @@ cli.command('', 'Run the bot')
         }
         const ctx = createContext();
 
-        let dbTimeout: any = undefined;
         let db = new Database(opts.data.database);
+
         let orm = drizzle(db, {
             schema: t
         });
 
-        ctx.getter(kDb, () => {
-            clearTimeout(dbTimeout);
-            if (!orm) {
-                db = new Database(opts.data.database);
-                orm = drizzle(db, {
-                    schema: t
-                });
-            }
-            dbTimeout = setTimeout(() => {
-                db.close();
-                db = undefined as any;
-                orm = undefined as any;
-            }, 60000);
-            return orm;
-        });
+        orm.run(sql`PRAGMA soft_heap_limit = 4194304`);
+
+        ctx.set(kDb, orm);
 
         migrate(orm, {
             migrationsFolder: resolve(import.meta.dirname, process.env.MIGRATIONS_FOLDER ?? 'drizzle')
@@ -116,7 +105,7 @@ cli.command('', 'Run the bot')
             console.log('Program shutting down');
             ctx.get(kServer).stop();
             await ctx.get(kClient).destroy();
-            db?.close();
+            db.close();
             process.exit(0);
         };
 
