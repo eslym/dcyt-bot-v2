@@ -14,7 +14,9 @@ export function upsertGuild(db: DB, guild: Guild) {
         })
         .onConflictDoUpdate({
             target: schema.guild.id,
-            set: {}
+            set: {
+                updatedAt: new Date()
+            }
         })
         .returning()
         .get();

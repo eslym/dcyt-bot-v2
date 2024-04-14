@@ -671,7 +671,8 @@ const modalHandlers: Record<string, (ctx: Context, interaction: ModalSubmitInter
                         .onConflictDoUpdate({
                             target: t.guildChannel.id,
                             set: {
-                                [`${category.toLowerCase()}Text`]: value
+                                [`${category.toLowerCase()}Text`]: value,
+                                updatedAt: new Date()
                             }
                         })
                         .run();
@@ -768,7 +769,9 @@ const buttonHandlers: Record<string, (ctx: Context, interaction: ButtonInteracti
                     })
                     .onConflictDoUpdate({
                         target: t.youtubeChannel.id,
-                        set: {}
+                        set: {
+                            updatedAt: new Date()
+                        }
                     })
                     .run();
                 db.insert(t.guildChannel)
@@ -778,7 +781,9 @@ const buttonHandlers: Record<string, (ctx: Context, interaction: ButtonInteracti
                     })
                     .onConflictDoUpdate({
                         target: t.guildChannel.id,
-                        set: {}
+                        set: {
+                            updatedAt: new Date()
+                        }
                     })
                     .run();
                 const sub = db
