@@ -43,7 +43,6 @@ import { checkSubs } from './websub';
 import * as t from './db/schema';
 import { count, sql } from 'drizzle-orm';
 import { getGuildData, upsertGuild } from './db/utils';
-import { createId } from '@paralleldrive/cuid2';
 import type { YoutubeSubscription } from './db/types';
 import { alias } from 'drizzle-orm/sqlite-core';
 
