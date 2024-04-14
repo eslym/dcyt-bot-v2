@@ -10,14 +10,11 @@ export function upsertGuild(db: DB, guild: Guild) {
     return db
         .insert(schema.guild)
         .values({
-            id: guild.id,
-            updatedAt: new Date()
+            id: guild.id
         })
         .onConflictDoUpdate({
             target: schema.guild.id,
-            set: {
-                updatedAt: new Date()
-            }
+            set: {}
         })
         .returning()
         .get();

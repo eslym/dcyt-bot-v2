@@ -331,6 +331,11 @@ export async function getChannelData(urlOrHandle: string) {
             if (res.metadata.description.length > 500) {
                 res.metadata.description = res.metadata.description.slice(0, 500) + '...';
             }
+            res.metadata = {
+                title: res.metadata.title,
+                description: res.metadata.description,
+                externalId: res.metadata.externalId
+            } as any;
             return res;
         },
         ttl
@@ -344,13 +349,8 @@ export async function getChannelData(urlOrHandle: string) {
     return result;
 }
 
-export async function getVideoData(id: string, cached: boolean = true) {
-    const ttl = 60 * 1000;
+export async function getVideoData(id: string) {
     const url = `https://www.youtube.com/watch?v=${id}`;
-    if (cached) {
-        return await cache.get(url, () => fetchVideo(url), ttl);
-    }
     const result = await fetchVideo(url);
-    cache.set(url, result, ttl);
     return result;
 }

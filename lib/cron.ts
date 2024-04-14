@@ -59,7 +59,7 @@ export function setupCron(ctx: Context) {
         for (const videoRecord of records) {
             if (lock.has(videoRecord.id)) continue;
             lock.add(videoRecord.id);
-            const videoData = await getVideoData(videoRecord.id, false).catch((err) => {
+            const videoData = await getVideoData(videoRecord.id).catch((err) => {
                 lock.delete(videoRecord.id);
                 console.warn(
                     '[cron]',
@@ -81,8 +81,7 @@ export function setupCron(ctx: Context) {
                 .set({
                     title: videoData.details.title,
                     scheduledAt: videoData.schedule ?? null,
-                    [`${notifyType.toLowerCase()}NotifiedAt`]: new Date(),
-                    updatedAt: new Date()
+                    [`${notifyType.toLowerCase()}NotifiedAt`]: new Date()
                 })
                 .where(sql`${t.youtubeVideo.id} = ${videoId}`)
                 .run();

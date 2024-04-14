@@ -85,8 +85,7 @@ export async function handleWebSub(ctx: Context, req: Request): Promise<Response
             const expires = new Date(Date.now() + lease * 1000);
             db.update(t.youtubeChannel)
                 .set({
-                    webhookExpiresAt: expires,
-                    updatedAt: new Date()
+                    webhookExpiresAt: expires
                 })
                 .where(sql`${t.youtubeChannel.webhookId} = ${id}`)
                 .run();
@@ -101,8 +100,7 @@ export async function handleWebSub(ctx: Context, req: Request): Promise<Response
         db.update(t.youtubeChannel)
             .set({
                 webhookExpiresAt: null,
-                webhookSecret: null,
-                updatedAt: new Date()
+                webhookSecret: null
             })
             .where(sql`${t.youtubeChannel.webhookId} = ${id}`)
             .run();
@@ -162,8 +160,7 @@ async function videoCallback(ctx: Context, ch: YoutubeChannel, body: Buffer) {
         const videoId = xml.feed['at:deleted-entry']['@ref'].split(':').pop()!;
         db.update(t.youtubeVideo)
             .set({
-                deletedAt: at,
-                updatedAt: new Date()
+                deletedAt: at
             })
             .where(sql`${t.youtubeVideo.id} = ${videoId}`)
             .run();
@@ -183,7 +180,7 @@ async function videoCallback(ctx: Context, ch: YoutubeChannel, body: Buffer) {
         .from(t.youtubeVideo)
         .where(sql`${t.youtubeVideo.id} = ${videoId}`)
         .get();
-    const videoData = await getVideoData(videoId, false).catch(catchCase);
+    const videoData = await getVideoData(videoId).catch(catchCase);
     const videoType = determineVideoType(videoData);
     if (!videoRecord) {
         const notifyType =
@@ -199,8 +196,7 @@ async function videoCallback(ctx: Context, ch: YoutubeChannel, body: Buffer) {
                 title: videoData.details.title,
                 type: videoType,
                 scheduledAt: videoData.schedule,
-                [`${notifyType.toLowerCase()}NotifiedAt`]: new Date(),
-                updatedAt: new Date()
+                [`${notifyType.toLowerCase()}NotifiedAt`]: new Date()
             })
             .run();
         lock.delete(videoId);
@@ -227,8 +223,7 @@ async function videoCallback(ctx: Context, ch: YoutubeChannel, body: Buffer) {
     if (videoRecord.deletedAt) {
         db.update(t.youtubeVideo)
             .set({
-                deletedAt: null,
-                updatedAt: new Date()
+                deletedAt: null
             })
             .where(sql`${t.youtubeVideo.id} = ${videoId}`)
             .run();
@@ -244,8 +239,7 @@ async function videoCallback(ctx: Context, ch: YoutubeChannel, body: Buffer) {
         .set({
             title: videoData.details.title,
             scheduledAt: videoData.schedule ?? null,
-            [`${notifyType.toLowerCase()}NotifiedAt`]: new Date(),
-            updatedAt: new Date()
+            [`${notifyType.toLowerCase()}NotifiedAt`]: new Date()
         })
         .where(sql`${t.youtubeVideo.id} = ${videoId}`)
         .run();

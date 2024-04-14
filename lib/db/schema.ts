@@ -1,5 +1,6 @@
 import { sqliteTable, text, uniqueIndex, primaryKey, integer } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
+import { createId } from '@paralleldrive/cuid2';
 
 export const guild = sqliteTable('Guild', {
     id: text('id').primaryKey().notNull(),
@@ -10,7 +11,7 @@ export const guild = sqliteTable('Guild', {
     upcomingText: text('upcomingText'),
     liveText: text('liveText'),
     createdAt: integer('createdAt', { mode: 'timestamp_ms' }).default(sql`(CURRENT_TIMESTAMP)`),
-    updatedAt: integer('updatedAt', { mode: 'timestamp_ms' })
+    updatedAt: integer('updatedAt', { mode: 'timestamp_ms' }).$onUpdate(() => sql`(CURRENT_TIMESTAMP)`)
 });
 
 export const guildChannel = sqliteTable('GuildChannel', {
@@ -24,18 +25,18 @@ export const guildChannel = sqliteTable('GuildChannel', {
     upcomingText: text('upcomingText'),
     liveText: text('liveText'),
     createdAt: integer('createdAt', { mode: 'timestamp_ms' }).default(sql`(CURRENT_TIMESTAMP)`),
-    updatedAt: integer('updatedAt', { mode: 'timestamp_ms' })
+    updatedAt: integer('updatedAt', { mode: 'timestamp_ms' }).$onUpdate(() => sql`(CURRENT_TIMESTAMP)`)
 });
 
 export const youtubeChannel = sqliteTable(
     'YoutubeChannel',
     {
         id: text('id').primaryKey().notNull(),
-        webhookId: text('webhookId').notNull(),
+        webhookId: text('webhookId').$defaultFn(createId).notNull(),
         webhookSecret: text('webhookSecret'),
         webhookExpiresAt: integer('webhookExpiresAt', { mode: 'timestamp_ms' }),
         createdAt: integer('createdAt', { mode: 'timestamp_ms' }).default(sql`(CURRENT_TIMESTAMP)`),
-        updatedAt: integer('updatedAt', { mode: 'timestamp_ms' })
+        updatedAt: integer('updatedAt', { mode: 'timestamp_ms' }).$onUpdate(() => sql`(CURRENT_TIMESTAMP)`)
     },
     (table) => {
         return {
@@ -59,7 +60,7 @@ export const youtubeVideo = sqliteTable('YoutubeVideo', {
     upcomingNotifiedAt: integer('upcomingNotifiedAt', { mode: 'timestamp_ms' }),
     liveNotifiedAt: integer('liveNotifiedAt', { mode: 'timestamp_ms' }),
     createdAt: integer('createdAt', { mode: 'timestamp_ms' }).default(sql`(CURRENT_TIMESTAMP)`),
-    updatedAt: integer('updatedAt', { mode: 'timestamp_ms' })
+    updatedAt: integer('updatedAt', { mode: 'timestamp_ms' }).$onUpdate(() => sql`(CURRENT_TIMESTAMP)`)
 });
 
 export const youtubeSubscription = sqliteTable(
@@ -82,7 +83,7 @@ export const youtubeSubscription = sqliteTable(
         upcomingText: text('upcomingText'),
         liveText: text('liveText'),
         createdAt: integer('createdAt', { mode: 'timestamp_ms' }).default(sql`(CURRENT_TIMESTAMP)`),
-        updatedAt: integer('updatedAt', { mode: 'timestamp_ms' })
+        updatedAt: integer('updatedAt', { mode: 'timestamp_ms' }).$onUpdate(() => sql`(CURRENT_TIMESTAMP)`)
     },
     (table) => {
         return {

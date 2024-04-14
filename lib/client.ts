@@ -474,8 +474,7 @@ const selectMenuHandlers: Record<string, (ctx: Context, interaction: StringSelec
                     const guildData = db
                         .update(t.guild)
                         .set({
-                            language: interaction.values[0],
-                            updatedAt: new Date()
+                            language: interaction.values[0]
                         })
                         .where(sql`${t.guild.id} = ${guildId}`)
                         .returning()
@@ -544,9 +543,7 @@ const selectMenuHandlers: Record<string, (ctx: Context, interaction: StringSelec
                     const sub = db.select().from(t.youtubeSubscription).where(where).get()!;
                     if (!sub) return;
                     interaction.deferUpdate();
-                    const update: any = {
-                        updatedAt: new Date()
-                    };
+                    const update: any = {};
                     for (const category of Object.values(NotificationType)) {
                         update[`notify${ucfirst(category)}`] = interaction.values.includes(category);
                     }
@@ -670,22 +667,19 @@ const modalHandlers: Record<string, (ctx: Context, interaction: ModalSubmitInter
                         .values({
                             id: channelId,
                             guildId: guildId,
-                            [`${category.toLowerCase()}Text`]: value,
-                            updatedAt: new Date()
+                            [`${category.toLowerCase()}Text`]: value
                         })
                         .onConflictDoUpdate({
                             target: t.guildChannel.id,
                             set: {
-                                [`${category.toLowerCase()}Text`]: value,
-                                updatedAt: new Date()
+                                [`${category.toLowerCase()}Text`]: value
                             }
                         })
                         .run();
                 } else {
                     db.update(t.guild)
                         .set({
-                            [`${category.toLowerCase()}Text`]: value,
-                            updatedAt: new Date()
+                            [`${category.toLowerCase()}Text`]: value
                         })
                         .run();
                 }
@@ -716,8 +710,7 @@ const modalHandlers: Record<string, (ctx: Context, interaction: ModalSubmitInter
                 if (!sub) return;
                 db.update(t.youtubeSubscription)
                     .set({
-                        [`${category.toLowerCase()}Text`]: value,
-                        updatedAt: new Date()
+                        [`${category.toLowerCase()}Text`]: value
                     })
                     .where(where)
                     .run();
@@ -772,28 +765,21 @@ const buttonHandlers: Record<string, (ctx: Context, interaction: ButtonInteracti
                 }
                 db.insert(t.youtubeChannel)
                     .values({
-                        id: source,
-                        webhookId: createId(),
-                        updatedAt: new Date()
+                        id: source
                     })
                     .onConflictDoUpdate({
                         target: t.youtubeChannel.id,
-                        set: {
-                            updatedAt: new Date()
-                        }
+                        set: {}
                     })
                     .run();
                 db.insert(t.guildChannel)
                     .values({
                         id: targetChannel,
-                        guildId: guildId,
-                        updatedAt: new Date()
+                        guildId: guildId
                     })
                     .onConflictDoUpdate({
                         target: t.guildChannel.id,
-                        set: {
-                            updatedAt: new Date()
-                        }
+                        set: {}
                     })
                     .run();
                 const sub = db
