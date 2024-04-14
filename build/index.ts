@@ -40,7 +40,7 @@ const bundle = await Bun.build({
         syntax: true
     },
     plugins: [ImportMarkdown],
-    external: Object.keys((pkg as any).dependencies ?? {}),
+    external: ['drizzle-orm', 'drizzle-orm/sqlite-core', 'drizzle-orm/bun-sqlite', 'drizzle-orm/bun-sqlite/migrator'],
     define: {
         'process.env.MIGRATIONS_FOLDER': '"drizzle"'
     }
@@ -58,6 +58,7 @@ for (const file of bundle.outputs) {
     );
 }
 
+delete (pkg as any).dependencies;
 delete (pkg as any).devDependencies;
 delete (pkg as any).peerDependencies;
 pkg.module = 'index.js';
@@ -103,8 +104,8 @@ const index = await Bun.file(resolve(outdir, 'index.js')).text();
 await Bun.write(
     resolve(outdir, 'index.js'),
     index
-        .replace('from "drizzle-orm"', 'from "./drizzle/lib/drizzle-orm"')
-        .replace('from "drizzle-orm/sqlite-core"', 'from "./drizzle/lib/sqlite-core"')
-        .replace('from "drizzle-orm/bun-sqlite"', 'from "./drizzle/lib/bun-sqlite"')
-        .replace('from "drizzle-orm/bun-sqlite/migrator"', 'from "./drizzle/lib/migrator"')
+        .replaceAll('from "drizzle-orm"', 'from "./drizzle/lib/drizzle-orm"')
+        .replaceAll('from "drizzle-orm/sqlite-core"', 'from "./drizzle/lib/sqlite-core"')
+        .replaceAll('from "drizzle-orm/bun-sqlite"', 'from "./drizzle/lib/bun-sqlite"')
+        .replaceAll('from "drizzle-orm/bun-sqlite/migrator"', 'from "./drizzle/lib/migrator"')
 );
