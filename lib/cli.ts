@@ -13,6 +13,8 @@ import { Database } from 'bun:sqlite';
 import { drizzle } from 'drizzle-orm/bun-sqlite';
 import { migrate } from 'drizzle-orm/bun-sqlite/migrator';
 import { resolve } from 'path';
+import { heapStats } from 'bun:jsc';
+import * as t from './db/schema';
 
 const env = Bun.env;
 
@@ -24,8 +26,23 @@ cli.command('', 'Run the bot')
     .option('-h, --host [host]', 'Host to listen on', { default: env.HOST || '0.0.0.0' })
     .option('-p, --port [port]', 'Port to listen on', { default: env.PORT || '80' })
     .option('-d, --database [database]', 'Database path', { default: resolve(env.DATABASE_URL || './db.sqlite') })
+    .option('--heap', 'Log heap usage every 10 seconds', { default: env.DUMP_HEAP === 'true' })
     .example('start -t <token> -w <websub> -h <host> -p <port>')
     .action(async (options) => {
+        if (options.heap) {
+            setInterval(() => {
+                const stats = heapStats();
+                console.log(
+                    '[heap]',
+                    'size:',
+                    stats.heapSize,
+                    'cap:',
+                    stats.heapCapacity,
+                    'objects:',
+                    stats.objectCount
+                );
+            }, 10000);
+        }
         const opts = startOptions.safeParse(options);
         if (!opts.success) {
             console.error('Invalid options');
@@ -40,9 +57,26 @@ cli.command('', 'Run the bot')
         }
         const ctx = createContext();
 
-        const db = new Database(opts.data.database);
-        const orm = drizzle(db, {
-            schema: await import('./db/schema')
+        let dbTimeout: any = undefined;
+        let db = new Database(opts.data.database);
+        let orm = drizzle(db, {
+            schema: t
+        });
+
+        ctx.getter(kDb, () => {
+            clearTimeout(dbTimeout);
+            if (!orm) {
+                db = new Database(opts.data.database);
+                orm = drizzle(db, {
+                    schema: t
+                });
+            }
+            dbTimeout = setTimeout(() => {
+                db.close();
+                db = undefined as any;
+                orm = undefined as any;
+            }, 60000);
+            return orm;
         });
 
         migrate(orm, {
@@ -50,7 +84,6 @@ cli.command('', 'Run the bot')
         });
 
         ctx.set(kOptions, opts.data);
-        ctx.set(kDb, orm);
 
         ctx.set(kClient, new Client({ intents: [IntentsBitField.Flags.Guilds], partials: [] }));
         ctx.set(
@@ -83,7 +116,7 @@ cli.command('', 'Run the bot')
             console.log('Program shutting down');
             ctx.get(kServer).stop();
             await ctx.get(kClient).destroy();
-            db.close();
+            db?.close();
             process.exit(0);
         };
 

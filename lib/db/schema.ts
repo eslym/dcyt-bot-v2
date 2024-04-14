@@ -11,7 +11,7 @@ export const guild = sqliteTable('Guild', {
     upcomingText: text('upcomingText'),
     liveText: text('liveText'),
     createdAt: integer('createdAt', { mode: 'timestamp_ms' }).default(sql`(CURRENT_TIMESTAMP)`),
-    updatedAt: integer('updatedAt', { mode: 'timestamp_ms' }).$onUpdate(() => sql`(CURRENT_TIMESTAMP)`)
+    updatedAt: integer('updatedAt', { mode: 'timestamp_ms' }).$onUpdate(() => new Date())
 });
 
 export const guildChannel = sqliteTable('GuildChannel', {
@@ -25,7 +25,7 @@ export const guildChannel = sqliteTable('GuildChannel', {
     upcomingText: text('upcomingText'),
     liveText: text('liveText'),
     createdAt: integer('createdAt', { mode: 'timestamp_ms' }).default(sql`(CURRENT_TIMESTAMP)`),
-    updatedAt: integer('updatedAt', { mode: 'timestamp_ms' }).$onUpdate(() => sql`(CURRENT_TIMESTAMP)`)
+    updatedAt: integer('updatedAt', { mode: 'timestamp_ms' }).$onUpdate(() => new Date())
 });
 
 export const youtubeChannel = sqliteTable(
@@ -36,7 +36,7 @@ export const youtubeChannel = sqliteTable(
         webhookSecret: text('webhookSecret'),
         webhookExpiresAt: integer('webhookExpiresAt', { mode: 'timestamp_ms' }),
         createdAt: integer('createdAt', { mode: 'timestamp_ms' }).default(sql`(CURRENT_TIMESTAMP)`),
-        updatedAt: integer('updatedAt', { mode: 'timestamp_ms' }).$onUpdate(() => sql`(CURRENT_TIMESTAMP)`)
+        updatedAt: integer('updatedAt', { mode: 'timestamp_ms' }).$onUpdate(() => new Date())
     },
     (table) => {
         return {
@@ -60,7 +60,7 @@ export const youtubeVideo = sqliteTable('YoutubeVideo', {
     upcomingNotifiedAt: integer('upcomingNotifiedAt', { mode: 'timestamp_ms' }),
     liveNotifiedAt: integer('liveNotifiedAt', { mode: 'timestamp_ms' }),
     createdAt: integer('createdAt', { mode: 'timestamp_ms' }).default(sql`(CURRENT_TIMESTAMP)`),
-    updatedAt: integer('updatedAt', { mode: 'timestamp_ms' }).$onUpdate(() => sql`(CURRENT_TIMESTAMP)`)
+    updatedAt: integer('updatedAt', { mode: 'timestamp_ms' }).$onUpdate(() => new Date())
 });
 
 export const youtubeSubscription = sqliteTable(
@@ -83,7 +83,7 @@ export const youtubeSubscription = sqliteTable(
         upcomingText: text('upcomingText'),
         liveText: text('liveText'),
         createdAt: integer('createdAt', { mode: 'timestamp_ms' }).default(sql`(CURRENT_TIMESTAMP)`),
-        updatedAt: integer('updatedAt', { mode: 'timestamp_ms' }).$onUpdate(() => sql`(CURRENT_TIMESTAMP)`)
+        updatedAt: integer('updatedAt', { mode: 'timestamp_ms' }).$onUpdate(() => new Date())
     },
     (table) => {
         return {
