@@ -51,6 +51,8 @@ Mustache.escape = function escapeMarkdown(text) {
     return text.replace(markdownSpecialChars, '\\$1');
 };
 
+Mustache.templateCache = undefined;
+
 function escapeDiscordMarkdown(text: string) {
     const markdownSpecialChars = /([\\`*_\[\]\-~<]|^[#>])/g;
     return text.replace(markdownSpecialChars, '\\$1');

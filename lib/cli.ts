@@ -91,6 +91,7 @@ cli.command('', 'Run the bot')
             Bun.serve({
                 hostname: opts.data.host,
                 port: opts.data.port,
+                development: false,
                 async fetch(request) {
                     const result = await handleWebSub(ctx, request);
                     if (result) return result;
