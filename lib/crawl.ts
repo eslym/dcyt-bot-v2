@@ -88,36 +88,6 @@ export class CrawlError extends Error {
     }
 }
 
-class ScriptExtractor implements HTMLRewriterTypes.HTMLRewriterElementContentHandlers {
-    public scripts: string[] = [];
-    #script = '';
-
-    element(element: HTMLRewriterTypes.Element) {
-        element.onEndTag(() => {
-            this.scripts.push(this.#script);
-            this.#script = '';
-        });
-    }
-
-    text(text: HTMLRewriterTypes.Text) {
-        this.#script += text.text;
-    }
-}
-
-class MetaExtractor implements HTMLRewriterTypes.HTMLRewriterElementContentHandlers {
-    public url?: string;
-    public type?: 'profile' | 'video.other';
-
-    element(element: HTMLRewriterTypes.Element): void {
-        if (!element.hasAttribute('property')) return;
-        if (element.getAttribute('property') === 'og:url') {
-            this.url = element.getAttribute('content') ?? undefined;
-        } else if (element.getAttribute('property') === 'og:type') {
-            this.type = (element.getAttribute('content') ?? undefined) as 'profile' | 'video.other';
-        }
-    }
-}
-
 const quotes = new Set(['"', "'"]);
 
 type StringRange = [number, number];
@@ -201,25 +171,23 @@ function validateURL(url: string) {
     }
 }
 
-const se = new ScriptExtractor();
-const me = new MetaExtractor();
+type ScriptsAndMeta = { scripts: string[]; meta: { url?: string; type?: 'profile' | 'video.other' } };
 
-async function extractScriptAndMeta(res: Response) {
-    if (res.status !== 200) {
-        throw new FetchError(res.url, res.status);
-    }
-    const html = await res.text();
-    me.url = undefined;
-    me.type = undefined;
-    const rewriter = new HTMLRewriter().on('script', se).on('meta', me);
-    rewriter.transform(html);
-    return {
-        scripts: se.scripts,
-        meta: {
-            url: me.url,
-            type: me.type
-        }
-    };
+type WorkerResult = { ok: true; data: ScriptsAndMeta } | { ok: false; status: number };
+
+async function extractScriptAndMeta(url: string, headers: HeadersInit) {
+    return new Promise<ScriptsAndMeta>((resolve, reject) => {
+        const worker = new Worker(new URL(process.env.__WORKER_PATH ?? './worker.ts', import.meta.url));
+        worker.onmessage = (event: MessageEvent<WorkerResult>) => {
+            if (event.data.ok) {
+                resolve(event.data.data);
+            } else {
+                reject(new FetchError(url, event.data.status));
+            }
+            worker.terminate();
+        };
+        worker.postMessage({ url, headers });
+    });
 }
 
 function extractProfile(scripts: string[]): ProfileCrawlResult {
@@ -275,13 +243,9 @@ function extractVideo(scripts: string[]): VideoCrawlResult {
 export async function fetchProfile(url: string) {
     validateURL(url);
 
-    let res = await extractScriptAndMeta(
-        await fetch(url, {
-            headers: {
-                'accept-language': 'en-US,en;q=0.9'
-            }
-        })
-    );
+    let res = await extractScriptAndMeta(url, {
+        'accept-language': 'en-US,en;q=0.9'
+    });
 
     if (!res.meta.type) {
         throw new CrawlError();
@@ -289,13 +253,9 @@ export async function fetchProfile(url: string) {
 
     if (res.meta.type === 'video.other') {
         const data = extractVideo(res.scripts);
-        res = await extractScriptAndMeta(
-            await fetch(`https://youtube.com/channel/${data.details.channelId}`, {
-                headers: {
-                    'accept-language': 'en-US,en;q=0.9'
-                }
-            })
-        );
+        res = await extractScriptAndMeta(`https://youtube.com/channel/${data.details.channelId}`, {
+            'accept-language': 'en-US,en;q=0.9'
+        });
     }
 
     return extractProfile(res.scripts);
@@ -304,13 +264,9 @@ export async function fetchProfile(url: string) {
 export async function fetchVideo(url: string) {
     validateURL(url);
 
-    const res = await extractScriptAndMeta(
-        await fetch(url, {
-            headers: {
-                'accept-language': 'en-US,en;q=0.9'
-            }
-        })
-    );
+    const res = await extractScriptAndMeta(url, {
+        'accept-language': 'en-US,en;q=0.9'
+    });
 
     if (res.meta.type !== 'video.other') {
         throw new CrawlError();
@@ -334,7 +290,8 @@ export async function getChannelData(urlOrHandle: string) {
             res.metadata = {
                 title: res.metadata.title,
                 description: res.metadata.description,
-                externalId: res.metadata.externalId
+                externalId: res.metadata.externalId,
+                avatar: res.metadata.avatar
             } as any;
             return res;
         },

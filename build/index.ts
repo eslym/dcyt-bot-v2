@@ -32,9 +32,8 @@ await $`mkdir -p ${outdir}`;
 
 console.time('build bundle');
 const bundle = await Bun.build({
-    entrypoints: ['./lib/cli.ts'],
+    entrypoints: ['./lib/cli.ts', './lib/worker.ts'],
     outdir,
-    naming: 'index.js',
     target: 'bun',
     minify: {
         syntax: true
@@ -42,7 +41,8 @@ const bundle = await Bun.build({
     plugins: [ImportMarkdown],
     external: ['drizzle-orm', 'drizzle-orm/sqlite-core', 'drizzle-orm/bun-sqlite', 'drizzle-orm/bun-sqlite/migrator'],
     define: {
-        'process.env.MIGRATIONS_FOLDER': '"drizzle"'
+        'process.env.__MIGRATIONS_FOLDER': '"drizzle"',
+        'process.env.__WORKER_PATH': '"./worker.js"'
     }
 });
 console.timeEnd('build bundle');
@@ -57,6 +57,8 @@ for (const file of bundle.outputs) {
         )}`
     );
 }
+
+await $`mv ${outdir}/cli.js ${outdir}/index.js`;
 
 delete (pkg as any).dependencies;
 delete (pkg as any).devDependencies;

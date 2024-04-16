@@ -65,7 +65,7 @@ cli.command('', 'Run the bot')
         ctx.set(kDb, orm);
 
         migrate(orm, {
-            migrationsFolder: resolve(import.meta.dirname, process.env.MIGRATIONS_FOLDER ?? 'drizzle')
+            migrationsFolder: resolve(import.meta.dirname, process.env.__MIGRATIONS_FOLDER ?? 'drizzle')
         });
 
         ctx.set(kOptions, opts.data);
