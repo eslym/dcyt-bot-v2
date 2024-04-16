@@ -89,16 +89,12 @@ export class CrawlError extends Error {
 }
 
 class ScriptExtractor implements HTMLRewriterTypes.HTMLRewriterElementContentHandlers {
-    #scripts: string[] = [];
+    public scripts: string[] = [];
     #script = '';
-
-    get scripts() {
-        return this.#scripts;
-    }
 
     element(element: HTMLRewriterTypes.Element) {
         element.onEndTag(() => {
-            this.#scripts.push(this.#script);
+            this.scripts.push(this.#script);
             this.#script = '';
         });
     }
@@ -149,7 +145,7 @@ function locateString(source: string, index: number = 0): StringRange | null {
 }
 
 function locateObject(source: string, index: number = 0): StringRange | null {
-    let start = (index = source.indexOf('{', index));
+    const start = (index = source.indexOf('{', index));
     if (start === -1) {
         return null;
     }
@@ -161,7 +157,7 @@ function locateObject(source: string, index: number = 0): StringRange | null {
             open--;
         } else if (quotes.has(source[index])) {
             // when string
-            let loc = locateString(source, index);
+            const loc = locateString(source, index);
             if (!loc) {
                 return null;
             }
@@ -179,12 +175,12 @@ function extractObject<T extends object>(keyword: string, source: string, index:
     if (index < 0) {
         return null;
     }
-    let loc = locateObject(source, index);
+    const loc = locateObject(source, index);
     if (!loc) {
         return null;
     }
     try {
-        let json = source.slice(...loc);
+        const json = source.slice(...loc);
         return {
             range: loc,
             result: JSON5.parse(json)
@@ -205,14 +201,18 @@ function validateURL(url: string) {
     }
 }
 
+const se = new ScriptExtractor();
+const me = new MetaExtractor();
+
 async function extractScriptAndMeta(res: Response) {
     if (res.status !== 200) {
         throw new FetchError(res.url, res.status);
     }
-    const se = new ScriptExtractor();
-    const me = new MetaExtractor();
+    const html = await res.text();
+    me.url = undefined;
+    me.type = undefined;
     const rewriter = new HTMLRewriter().on('script', se).on('meta', me);
-    rewriter.transform(await res.text());
+    rewriter.transform(html);
     return {
         scripts: se.scripts,
         meta: {
@@ -223,9 +223,9 @@ async function extractScriptAndMeta(res: Response) {
 }
 
 function extractProfile(scripts: string[]): ProfileCrawlResult {
-    for (let script of scripts) {
+    for (const script of scripts) {
         if (script.match(/^\s*var\s+ytInitialData\s*=/)) {
-            let initialData = extractObject<any>('=', script);
+            const initialData = extractObject<any>('=', script);
             if (initialData && initialData.result.metadata) {
                 return {
                     type: 'profile',
@@ -239,7 +239,7 @@ function extractProfile(scripts: string[]): ProfileCrawlResult {
 
 function extractVideo(scripts: string[]): VideoCrawlResult {
     let ytInitialPlayerResponse: any = undefined;
-    for (let script of scripts) {
+    for (const script of scripts) {
         if (script.match(/^\s*var\s+ytInitialPlayerResponse\s*=/)) {
             ytInitialPlayerResponse = extractObject<any>('=', script)?.result;
             continue;
@@ -250,13 +250,13 @@ function extractVideo(scripts: string[]): VideoCrawlResult {
         throw new CrawlError();
     }
 
-    let result: VideoCrawlResult = {
+    const result: VideoCrawlResult = {
         type: 'video',
         details: ytInitialPlayerResponse.videoDetails
     };
 
     if (ytInitialPlayerResponse.playabilityStatus.liveStreamability) {
-        let streamAbility = ytInitialPlayerResponse.playabilityStatus.liveStreamability.liveStreamabilityRenderer;
+        const streamAbility = ytInitialPlayerResponse.playabilityStatus.liveStreamability.liveStreamabilityRenderer;
         if (
             streamAbility.offlineSlate &&
             streamAbility.offlineSlate.liveStreamOfflineSlateRenderer.scheduledStartTime
@@ -304,7 +304,7 @@ export async function fetchProfile(url: string) {
 export async function fetchVideo(url: string) {
     validateURL(url);
 
-    let res = await extractScriptAndMeta(
+    const res = await extractScriptAndMeta(
         await fetch(url, {
             headers: {
                 'accept-language': 'en-US,en;q=0.9'
@@ -352,5 +352,12 @@ export async function getChannelData(urlOrHandle: string) {
 export async function getVideoData(id: string) {
     const url = `https://www.youtube.com/watch?v=${id}`;
     const result = await fetchVideo(url);
+    result.details = {
+        videoId: result.details.videoId,
+        title: result.details.title,
+        author: result.details.author,
+        isLive: result.details.isLive,
+        isLiveContent: result.details.isLiveContent
+    } as any;
     return result;
 }

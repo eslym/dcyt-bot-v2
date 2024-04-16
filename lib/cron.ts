@@ -11,11 +11,11 @@ import { sql } from 'drizzle-orm';
 import { randomBytes } from 'crypto';
 
 export function setupCron(ctx: Context) {
-    const db = ctx.get(kDb);
     const client = ctx.get(kClient);
     const opts = ctx.get(kOptions);
 
     cron.schedule('*/15 * * * *', async () => {
+        const db = ctx.get(kDb);
         const chs = db
             .select({
                 id: t.youtubeChannel.id,
@@ -49,6 +49,7 @@ export function setupCron(ctx: Context) {
     });
 
     cron.schedule('*/5 * * * *', async () => {
+        const db = ctx.get(kDb);
         const records = db
             .select()
             .from(t.youtubeVideo)
@@ -91,7 +92,7 @@ export function setupCron(ctx: Context) {
                 videoType: videoRecord.type,
                 notifyType
             });
-            publishNotification(client, db, videoRecord.type as VideoType, videoData, notifyType);
+            await publishNotification(client, db, videoRecord.type as VideoType, videoData, notifyType);
         }
     });
 }
