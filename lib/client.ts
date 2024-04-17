@@ -29,7 +29,15 @@ import cnHelp from './help/zh-CN.md';
 import twHelp from './help/zh-TW.md';
 import { NotificationType } from './enum';
 import Mustache from 'mustache';
-import { CrawlError, InvalidURLError, getChannelData, FetchError } from './crawl';
+import { cache } from './cache';
+import {
+    CrawlError,
+    InvalidURLError,
+    fetchProfile,
+    type ProfileCrawlResult,
+    getChannelData,
+    FetchError
+} from './crawl';
 import { ucfirst } from './utils';
 import { checkSubs } from './websub';
 import * as t from './db/schema';
@@ -37,7 +45,6 @@ import { count, sql } from 'drizzle-orm';
 import { getGuildData, upsertGuild } from './db/utils';
 import type { YoutubeSubscription } from './db/types';
 import { alias } from 'drizzle-orm/sqlite-core';
-import type { ProfileCrawlResult } from './worker';
 
 Mustache.escape = function escapeMarkdown(text) {
     const markdownSpecialChars = /([\\`*_\[\]\-~<])/g;
@@ -542,7 +549,11 @@ const selectMenuHandlers: Record<string, (ctx: Context, interaction: StringSelec
                         update[`notify${ucfirst(category)}`] = interaction.values.includes(category);
                     }
                     db.update(t.youtubeSubscription).set(update).where(where).run();
-                    const result = await getChannelData(`https://youtube.com/channel/${source}`);
+                    const result = await cache.get(
+                        `https://youtube.com/channel/${source}`,
+                        () => fetchProfile(`https://youtube.com/channel/${source}`),
+                        600000
+                    );
                     await youtubeChannelInteraction(
                         interaction,
                         result,
@@ -627,7 +638,11 @@ const selectMenuHandlers: Record<string, (ctx: Context, interaction: StringSelec
                     await interaction.deferReply({
                         ephemeral: true
                     });
-                    const result = await getChannelData(`https://youtube.com/channel/${ytCh}`);
+                    const result = await cache.get(
+                        `https://youtube.com/channel/${ytCh}`,
+                        () => fetchProfile(`https://youtube.com/channel/${ytCh}`),
+                        600000
+                    );
                     await youtubeChannelInteraction(interaction, result, sub, dcCh, l);
                 })
                 .catch((err) => {
@@ -703,7 +718,11 @@ const modalHandlers: Record<string, (ctx: Context, interaction: ModalSubmitInter
                     .run();
                 if (interaction.isFromMessage()) {
                     interaction.deferUpdate();
-                    const result = await getChannelData(`https://youtube.com/channel/${source}`);
+                    const result = await cache.get(
+                        `https://youtube.com/channel/${source}`,
+                        () => fetchProfile(`https://youtube.com/channel/${source}`),
+                        600000
+                    );
                     await youtubeChannelInteraction(
                         interaction,
                         result,

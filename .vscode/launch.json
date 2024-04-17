@@ -10,8 +10,6 @@
       "request": "launch",
       "name": "Debug File",
       "program": "${workspaceFolder}/index.ts",
-      "runtimeArgs": ["--smol"],
-      "args": ["--heap"],
       "cwd": "${workspaceFolder}",
       "stopOnEntry": false,
       "watchMode": false

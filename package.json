@@ -6,12 +6,11 @@
   },
   "devDependencies": {
     "@paralleldrive/cuid2": "^2.2.2",
-    "@types/bun": "latest",
     "@types/mustache": "^4.2.5",
     "@types/node-cron": "^3.0.11",
+    "bun-types": "^1.1.4",
     "cac": "^6.7.14",
     "discord.js": "^14.14.1",
-    "json5": "^2.2.3",
     "mustache": "^4.2.0",
     "node-cron": "^3.0.3",
     "prettier": "^3.2.5",

@@ -1,4 +1,5 @@
 import type { Client, TextBasedChannel } from 'discord.js';
+import type { VideoCrawlResult } from './crawl';
 import type { ContextValue } from './ctx';
 import type { YoutubeVideo } from './db/types';
 import { NotificationType, VideoType } from './enum';
@@ -8,7 +9,6 @@ import Mustache from 'mustache';
 import * as t from './db/schema';
 import { sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/sqlite-core';
-import type { VideoCrawlResult } from './worker';
 
 export function ucfirst(str: string) {
     return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
