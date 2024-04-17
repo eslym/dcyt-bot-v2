@@ -123,7 +123,8 @@ export async function getVideoData(id: string) {
         title: result.details.title,
         author: result.details.author,
         isLive: result.details.isLive,
-        isLiveContent: result.details.isLiveContent
+        isLiveContent: result.details.isLiveContent,
+        channelId: result.details.channelId
     } as any;
     return result;
 }
