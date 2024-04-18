@@ -3,8 +3,6 @@ import { kClient, kDb, kOptions } from './symbols';
 import cron from 'node-cron';
 import { postWebsub, topicUrl } from './websub';
 import { VideoType } from './enum';
-import { lock } from './cache';
-import { getVideoData } from './crawl';
 import { determineNotificationType, publishNotification } from './utils';
 import * as t from './db/schema';
 import { sql } from 'drizzle-orm';

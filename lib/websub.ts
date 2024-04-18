@@ -1,11 +1,9 @@
-import { getChannelData, getVideoData } from './crawl';
 import type { Context } from './ctx';
-import { kClient, kDb, kOptions } from './symbols';
+import { kClient, kDb, kFetcher, kOptions } from './symbols';
 import { createHmac } from 'crypto';
 import { convert } from 'xmlbuilder2';
 import { NotificationType, VideoType } from './enum';
-import { determineVideoType, determineNotificationType, publishNotification } from './utils';
-import { lock } from './cache';
+import { determineNotificationType, publishNotification } from './utils';
 import * as t from './db/schema';
 import { count, sql } from 'drizzle-orm';
 import type { YoutubeChannel } from './db/types';
@@ -89,11 +87,10 @@ export async function handleWebSub(ctx: Context, req: Request): Promise<Response
                 })
                 .where(sql`${t.youtubeChannel.webhookId} = ${id}`)
                 .run();
-            const chData = await getChannelData(`https://youtube.com/channel/${ytCh.id}`);
             if (ytCh.webhookExpiresAt) {
-                console.log('[http]', `Subscription for ${chData.metadata.title} renewed.`);
+                console.log('[http]', `Subscription for https://youtube.com/channel/${ytCh.id} renewed.`);
             } else {
-                console.log('[http]', `Subscribed to ${chData.metadata.title}`);
+                console.log('[http]', `Subscribed to https://youtube.com/channel/${ytCh.id}`);
             }
             return;
         }
@@ -104,8 +101,7 @@ export async function handleWebSub(ctx: Context, req: Request): Promise<Response
             })
             .where(sql`${t.youtubeChannel.webhookId} = ${id}`)
             .run();
-        const chData = await getChannelData(`https://youtube.com/channel/${ytCh.id}`);
-        console.log('[http]', `Unsubscribed from ${chData.metadata.title}`);
+        console.log('[http]', `Unsubscribed from https://youtube.com/channel/${ytCh.id}`);
     });
     return new Response(url.searchParams.get('hub.challenge'), {
         status: 200,
@@ -151,7 +147,7 @@ interface DeletedFeed {
 }
 
 async function videoCallback(ctx: Context, ch: YoutubeChannel, body: Buffer) {
-    const db = ctx.get(kDb);
+    const [db, fetcher] = ctx.getAll(kDb, kFetcher);
     const xml = convert(body.toString('utf8'), { format: 'object' }) as any as {
         feed: FeedEntry | DeletedFeed;
     };
@@ -169,55 +165,45 @@ async function videoCallback(ctx: Context, ch: YoutubeChannel, body: Buffer) {
     }
     if (xml.feed.entry['yt:channelId'] !== ch.id) return;
     const videoId = xml.feed.entry['yt:videoId'];
-    if (lock.has(videoId)) return;
-    lock.add(videoId);
-    const catchCase = (err: any) => {
-        lock.delete(videoId);
-        throw err;
-    };
     const videoRecord = db
         .select()
         .from(t.youtubeVideo)
         .where(sql`${t.youtubeVideo.id} = ${videoId}`)
         .get();
-    const videoData = await getVideoData(videoId).catch(catchCase);
-    const videoType = determineVideoType(videoData);
+    const videoData = await fetcher.fetchVideoData(videoId);
     if (!videoRecord) {
         const notifyType =
-            videoType === 'VIDEO'
+            videoData.type === 'VIDEO'
                 ? NotificationType.PUBLISH
-                : videoData.schedule
-                  ? NotificationType.SCHEDULE
-                  : NotificationType.LIVE;
+                : videoData.live?.livedAt
+                  ? NotificationType.LIVE
+                  : NotificationType.SCHEDULE;
         db.insert(t.youtubeVideo)
             .values({
                 id: videoId,
                 channelId: ch.id,
-                title: videoData.details.title,
-                type: videoType,
-                scheduledAt: videoData.schedule,
+                title: videoData.title,
+                type: videoData.type,
+                scheduledAt: videoData.live?.scheduledAt,
                 [`${notifyType.toLowerCase()}NotifiedAt`]: new Date()
             })
             .run();
-        lock.delete(videoId);
-        if (videoData.details.isLiveContent && !videoData.details.isLive && !videoData.schedule) {
-            console.log('[http]', 'Ignoring finished live content', { videoId, videoType });
+        if (videoData.live?.endedAt) {
+            console.log('[http]', 'Ignoring finished live content', videoData);
             return;
         }
         const publishedAt = new Date(xml.feed.entry.published);
-        if (videoType === VideoType.VIDEO && Date.now() - publishedAt.valueOf() > 3 * 24 * 60 * 60 * 1000) {
+        if (videoData.type === VideoType.VIDEO && Date.now() - publishedAt.valueOf() > 3 * 24 * 60 * 60 * 1000) {
             // Sometimes youtube will send old video, so we set threshold to 3 days
             // ignore the video if it's older than 3 days
-            console.log('[http]', 'Ignoring old video', { videoId, videoType });
-            lock.delete(videoId);
+            console.log('[http]', 'Ignoring old video', videoData);
             return;
         }
-        console.log('[http]', 'Incoming notification', { videoId, videoType, notifyType });
-        publishNotification(ctx.get(kClient), db, videoType, videoData, notifyType);
+        console.log('[http]', 'Incoming notification', { videoData, notifyType });
+        publishNotification(ctx.get(kClient), db, videoData, notifyType);
         return;
     }
     if (videoRecord.type === VideoType.VIDEO) {
-        lock.delete(videoId);
         return;
     }
     if (videoRecord.deletedAt) {
@@ -227,29 +213,22 @@ async function videoCallback(ctx: Context, ch: YoutubeChannel, body: Buffer) {
             })
             .where(sql`${t.youtubeVideo.id} = ${videoId}`)
             .run();
-        lock.delete(videoId);
         return;
     }
     const notifyType = determineNotificationType(videoData, videoRecord);
     if (!notifyType || videoRecord.liveNotifiedAt || videoRecord.upcomingNotifiedAt) {
-        lock.delete(videoId);
         return;
     }
     db.update(t.youtubeVideo)
         .set({
-            title: videoData.details.title,
-            scheduledAt: videoData.schedule ?? null,
+            title: videoData.title,
+            scheduledAt: videoData.live?.scheduledAt ?? null,
             [`${notifyType.toLowerCase()}NotifiedAt`]: new Date()
         })
         .where(sql`${t.youtubeVideo.id} = ${videoId}`)
         .run();
-    lock.delete(videoId);
-    console.log('[http]', 'Incoming notification', {
-        videoId,
-        videoType,
-        notifyType
-    });
-    publishNotification(ctx.get(kClient), db, videoType, videoData, notifyType);
+    console.log('[http]', 'Incoming notification', { videoData, notifyType });
+    publishNotification(ctx.get(kClient), db, videoData, notifyType);
 }
 
 const env = Bun.env;

@@ -1,5 +1,4 @@
 import { chmodSync } from 'fs';
-import { ImportMarkdown } from '../lib/plugins';
 import pkg from '../package.json';
 import { $ } from 'bun';
 import { resolve } from 'path';
@@ -39,12 +38,27 @@ const bundle = await Bun.build({
     minify: {
         syntax: true
     },
-    plugins: [ImportMarkdown],
+    plugins: [
+        {
+            name: 'import-markdown',
+            target: 'bun',
+
+            setup(build) {
+                build.onLoad({ filter: /\.md$/ }, async ({ path }) => {
+                    return {
+                        contents: `export default ${JSON.stringify(await Bun.file(path).text())}`,
+                        loader: 'js'
+                    };
+                });
+            }
+        }
+    ],
     external: ['drizzle-orm', 'drizzle-orm/sqlite-core', 'drizzle-orm/bun-sqlite', 'drizzle-orm/bun-sqlite/migrator'],
     define: {
-        'process.env.MIGRATIONS_FOLDER': '"drizzle"'
+        MIGRATIONS_FOLDER: '"drizzle"'
     }
 });
+
 console.timeEnd('build bundle');
 
 bundle.logs.forEach((log) => console.log(log));
@@ -58,20 +72,15 @@ for (const file of bundle.outputs) {
     );
 }
 
-delete (pkg as any).dependencies;
-delete (pkg as any).devDependencies;
-delete (pkg as any).peerDependencies;
-pkg.module = 'index.js';
-
-await Bun.write('./dist/package.json', JSON.stringify(pkg, null, 2));
-
 chmodSync('./dist/index.js', '755');
 
 console.log("\nCopying 'drizzle' folder");
 
 await $`cp -r -v ${import.meta.dir}/../drizzle ${outdir}`;
 
-console.time('\nbuild drizzle-lib');
+console.log();
+
+console.time('build drizzle-lib');
 const drizzle = await Bun.build({
     entrypoints: [
         './build/drizzle/drizzle-orm.ts',

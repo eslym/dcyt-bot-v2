@@ -1,20 +1,22 @@
 #!/usr/bin/env bun
 
 import cac from 'cac';
-import { createContext } from './ctx';
-import { kClient, kDb, kOptions, kServer } from './symbols';
+import { kClient, kDb, kFetcher, kOptions, kServer } from './symbols';
 import { Client, IntentsBitField } from 'discord.js';
-import { startOptions } from './schema';
+import { startOptions } from './options';
 import { setupClient } from './client';
 import { handleWebSub } from './websub';
-import { cache } from './cache';
 import { setupCron } from './cron';
 import { Database } from 'bun:sqlite';
 import { drizzle } from 'drizzle-orm/bun-sqlite';
 import { migrate } from 'drizzle-orm/bun-sqlite/migrator';
 import { resolve } from 'path';
-import { heapStats } from 'bun:jsc';
 import * as t from './db/schema';
+import { Context } from './ctx';
+import { APIDataFetcher } from './youtube/api';
+import { youtube } from '@googleapis/youtube';
+
+declare var MIGRATION_FOLDER: string;
 
 const env = Bun.env;
 
@@ -26,23 +28,9 @@ cli.command('', 'Run the bot')
     .option('-h, --host [host]', 'Host to listen on', { default: env.HOST || '0.0.0.0' })
     .option('-p, --port [port]', 'Port to listen on', { default: env.PORT || '80' })
     .option('-d, --database [database]', 'Database path', { default: resolve(env.DATABASE_URL || './db.sqlite') })
-    .option('--heap', 'Log heap usage every 10 seconds', { default: env.DUMP_HEAP === 'true' })
+    .option('--gapi-token [token]', 'Google API token', { default: env.GOOGLE_API_TOKEN })
     .example('start -t <token> -w <websub> -h <host> -p <port>')
     .action(async (options) => {
-        if (options.heap) {
-            setInterval(() => {
-                const stats = heapStats();
-                console.log(
-                    '[heap]',
-                    'size:',
-                    stats.heapSize,
-                    'cap:',
-                    stats.heapCapacity,
-                    'objects:',
-                    stats.objectCount
-                );
-            }, 10000);
-        }
         const opts = startOptions.safeParse(options);
         if (!opts.success) {
             console.error('Invalid options');
@@ -55,7 +43,9 @@ cli.command('', 'Run the bot')
             }
             process.exit(1);
         }
-        const ctx = createContext();
+        const ctx = new Context();
+
+        ctx.set(kFetcher, new APIDataFetcher(youtube({ version: 'v3', auth: opts.data.gapiToken })));
 
         let db = new Database(opts.data.database);
         let orm = drizzle(db, {
@@ -65,7 +55,7 @@ cli.command('', 'Run the bot')
         ctx.set(kDb, orm);
 
         migrate(orm, {
-            migrationsFolder: resolve(import.meta.dirname, process.env.MIGRATIONS_FOLDER ?? 'drizzle')
+            migrationsFolder: resolve(import.meta.dirname, MIGRATION_FOLDER)
         });
 
         ctx.set(kOptions, opts.data);
@@ -93,8 +83,6 @@ cli.command('', 'Run the bot')
                 }
             })
         );
-
-        setInterval(() => cache.invalidate(), 15000);
 
         setupCron(ctx);
 

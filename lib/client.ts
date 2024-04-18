@@ -29,15 +29,6 @@ import cnHelp from './help/zh-CN.md';
 import twHelp from './help/zh-TW.md';
 import { NotificationType } from './enum';
 import Mustache from 'mustache';
-import { cache } from './cache';
-import {
-    CrawlError,
-    InvalidURLError,
-    fetchProfile,
-    type ProfileCrawlResult,
-    getChannelData,
-    FetchError
-} from './crawl';
 import { ucfirst } from './utils';
 import { checkSubs } from './websub';
 import * as t from './db/schema';
@@ -46,17 +37,14 @@ import { getGuildData, upsertGuild } from './db/utils';
 import type { YoutubeSubscription } from './db/types';
 import { alias } from 'drizzle-orm/sqlite-core';
 
-Mustache.escape = function escapeMarkdown(text) {
-    const markdownSpecialChars = /([\\`*_\[\]\-~<])/g;
-    return text.replace(markdownSpecialChars, '\\$1');
-};
-
 Mustache.templateCache = undefined;
 
 function escapeDiscordMarkdown(text: string) {
     const markdownSpecialChars = /([\\`*_\[\]\-~<]|^[#>])/g;
     return text.replace(markdownSpecialChars, '\\$1');
 }
+
+Mustache.escape = escapeDiscordMarkdown;
 
 export type ValidChannelTypes =
     | ChannelType.GuildText

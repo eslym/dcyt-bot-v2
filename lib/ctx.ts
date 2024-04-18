@@ -1,13 +1,22 @@
 export declare class ContextKey<T> {}
 
-export type Context = {
+type MapValues<T extends ContextKey<any>[]> = T['length'] extends 0
+    ? []
+    : T['length'] extends 1
+      ? [ContextValue<T[0]>]
+      : T extends [ContextKey<infer U>, ...infer R extends ContextKey<any>[]]
+        ? [U, ...MapValues<R>]
+        : never;
+
+export interface Context {
     get<T>(key: ContextKey<T>): T;
+    set<T>(key: ContextKey<T>, value: T): this;
+}
 
-    set<T>(key: ContextKey<T>, value: T): void;
-};
-
-export function createContext(): Context {
-    return new Map();
+export class Context extends Map {
+    getAll<T extends ContextKey<any>[]>(...keys: T): MapValues<T> {
+        return keys.map((key) => this.get(key)) as any;
+    }
 }
 
 export function ctxKey<T>(): ContextKey<T> {
