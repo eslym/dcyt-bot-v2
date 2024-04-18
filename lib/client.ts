@@ -21,7 +21,7 @@ import {
     ActivityType,
     type ModalMessageModalSubmitInteraction
 } from 'discord.js';
-import type { Context, ContextValue } from './ctx';
+import type { Context } from './ctx';
 import { kClient, kDb, kOptions, kYoutube } from './symbols';
 import { lang } from './lang';
 import enHelp from './help/en.md';

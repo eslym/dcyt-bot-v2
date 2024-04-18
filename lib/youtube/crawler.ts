@@ -1,4 +1,4 @@
-import { FetchError, InvalidURLError, NotFoundError } from './types';
+import { FetchError, InvalidURLError } from './types';
 
 class ScriptExtractor implements HTMLRewriterTypes.HTMLRewriterElementContentHandlers {
     public scripts: string[] = [];
