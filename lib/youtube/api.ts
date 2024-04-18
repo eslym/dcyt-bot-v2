@@ -65,7 +65,9 @@ export class APIDataFetcher implements DataFetcher {
             };
             if (video.liveStreamingDetails) {
                 data.live = {
-                    scheduledAt: new Date(video.liveStreamingDetails.scheduledStartTime!),
+                    scheduledAt: video.liveStreamingDetails.scheduledStartTime
+                        ? new Date(video.liveStreamingDetails.scheduledStartTime)
+                        : undefined,
                     livedAt: video.liveStreamingDetails.actualStartTime
                         ? new Date(video.liveStreamingDetails.actualStartTime)
                         : undefined,

@@ -7,7 +7,7 @@ export type YoutubeVideoData = {
     channelName: string;
     title: string;
     live?: {
-        scheduledAt: Date;
+        scheduledAt?: Date;
         livedAt?: Date;
         endedAt?: Date;
     };
