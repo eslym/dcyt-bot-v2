@@ -21,7 +21,8 @@ export function determineNotificationType(
     if (videoRecord.type === VideoType.VIDEO || !videoData.live) {
         return;
     }
-    if (!videoData.live.endedAt) {
+    if (videoData.live.livedAt) {
+        if (!videoData.live.endedAt) return;
         return NotificationType.LIVE;
     }
     const schedule = videoData.live.scheduledAt.valueOf();
