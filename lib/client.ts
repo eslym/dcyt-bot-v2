@@ -324,7 +324,8 @@ async function listSubscriptionInteraction(
     for (const sub of subscriptions) {
         menu.addOptions({
             value: sub.channelId,
-            label: sub.channelName ?? 'Unknown Channel'
+            label: sub.channelName ?? 'Unknown Channel',
+            description: `youtube.com/channel/${sub.channelId}`
         });
     }
 
