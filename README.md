@@ -1,7 +1,7 @@
 # Discord Youtube Notification Bot v2
 
 A bot to receive notification from youtube when there is any update. Notification received via
-[Google Pubsubhubbub hub](https://pubsubhubbub.appspot.com/), live-streaming details are fetched by crawling youtube page. All operations can be done by application command.
+[Google Pubsubhubbub hub](https://pubsubhubbub.appspot.com/), live-streaming details are fetched from YouTube Data API v3. All operations can be done by application command.
 
 To install dependencies:
 
@@ -30,6 +30,7 @@ bun run index.ts
 x-discord-token: &dcToken 'PUT YOUR PUT YOUR TOKEN HERE'
 x-cloudflared-token: &cfToken 'PUT YOUR CLOUDFLARED TOKEN HERE'
 x-websub-origin: &origin 'THE PUBLIC ORIGIN FOR HTTP SERVER TO RECEIVE WEBHOOK'
+x-google-api-token: &gapiToken 'PUT YOUR GOOGLE API KEY HERE'
 
 x-logging: &logging
     driver: 'json-file'
@@ -51,6 +52,7 @@ services:
             DATABASE_URL: /database/db.sqlite
             DISCORD_TOKEN: *dcToken
             WEBSUB_ORIGIN: *origin
+            GOOGLE_API_TOKEN: *gapiToken
         logging: *logging
     tunnel:
         container_name: cloudflared

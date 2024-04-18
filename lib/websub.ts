@@ -171,6 +171,10 @@ async function videoCallback(ctx: Context, ch: YoutubeChannel, body: Buffer) {
         .where(sql`${t.youtubeVideo.id} = ${videoId}`)
         .get();
     const videoData = await fetcher.fetchVideoData(videoId);
+    db.update(t.youtubeChannel)
+        .set({ title: videoData.channelName })
+        .where(sql`${t.youtubeChannel.id} = ${ch.id}`)
+        .run();
     if (!videoRecord) {
         const notifyType =
             videoData.type === 'VIDEO'
@@ -223,6 +227,7 @@ async function videoCallback(ctx: Context, ch: YoutubeChannel, body: Buffer) {
         .set({
             title: videoData.title,
             scheduledAt: videoData.live?.scheduledAt ?? null,
+            livedAt: videoData.live?.livedAt ?? null,
             [`${notifyType.toLowerCase()}NotifiedAt`]: new Date()
         })
         .where(sql`${t.youtubeVideo.id} = ${videoId}`)

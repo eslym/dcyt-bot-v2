@@ -1,5 +1,5 @@
 import type { Context } from './ctx';
-import { kClient, kDb, kOptions } from './symbols';
+import { kClient, kDb, kFetcher, kOptions } from './symbols';
 import cron from 'node-cron';
 import { postWebsub, topicUrl } from './websub';
 import { VideoType } from './enum';
@@ -7,13 +7,12 @@ import { determineNotificationType, publishNotification } from './utils';
 import * as t from './db/schema';
 import { sql } from 'drizzle-orm';
 import { randomBytes } from 'crypto';
+import { NotFoundError, type YoutubeVideoData } from './youtube/types';
 
 export function setupCron(ctx: Context) {
-    const client = ctx.get(kClient);
-    const opts = ctx.get(kOptions);
+    const [client, db, opts, fetcher] = ctx.getAll(kClient, kDb, kOptions, kFetcher);
 
     cron.schedule('*/15 * * * *', async () => {
-        const db = ctx.get(kDb);
         const chs = db
             .select({
                 id: t.youtubeChannel.id,
@@ -47,50 +46,67 @@ export function setupCron(ctx: Context) {
     });
 
     cron.schedule('*/5 * * * *', async () => {
-        const db = ctx.get(kDb);
         const records = db
             .select()
             .from(t.youtubeVideo)
             .where(
-                sql`${t.youtubeVideo.type} IN ${[VideoType.LIVE, VideoType.PREMIERE]} AND ${t.youtubeVideo.liveNotifiedAt} IS NULL AND ${t.youtubeVideo.upcomingNotifiedAt} IS NULL AND ${t.youtubeVideo.deletedAt} IS NULL`
+                sql`${t.youtubeVideo.type} IN ${[VideoType.LIVE, VideoType.PREMIERE]} AND ((${t.youtubeVideo.liveNotifiedAt} IS NULL AND ${t.youtubeVideo.upcomingNotifiedAt} IS NULL) OR ${t.youtubeVideo.livedAt} IS NULL) AND ${t.youtubeVideo.deletedAt} IS NULL`
             )
             .all();
+        if (!records.length) return;
+        const videoDatas = new Map<string, YoutubeVideoData | Error>(
+            await Promise.all(
+                records.map((record) =>
+                    fetcher
+                        .fetchVideoData(record.id)
+                        .then((d) => [record.id, d] as const)
+                        .catch((err) => [record.id, err as Error] as const)
+                )
+            )
+        );
+        const channels = new Map();
         for (const videoRecord of records) {
-            if (lock.has(videoRecord.id)) continue;
-            lock.add(videoRecord.id);
-            const videoData = await getVideoData(videoRecord.id).catch((err) => {
-                lock.delete(videoRecord.id);
-                console.warn(
-                    '[cron]',
-                    `Failed to fetch video data for https://www.youtube.com/watch?v=${videoRecord.id}`,
-                    {
-                        error: err
-                    }
-                );
-                return null;
-            });
-            if (!videoData) continue;
+            const videoData = videoDatas.get(videoRecord.id)!;
+            if (videoData instanceof NotFoundError) {
+                db.update(t.youtubeVideo)
+                    .set({
+                        deletedAt: new Date()
+                    })
+                    .where(sql`${t.youtubeVideo.id} = ${videoRecord.id}`)
+                    .run();
+                continue;
+            }
+            if (videoData instanceof Error) {
+                console.error('[cron]', `Failed to fetch video data for ${videoRecord.title}`, {
+                    id: videoRecord.id,
+                    error: videoData
+                });
+                continue;
+            }
             const videoId = videoRecord.id;
             const notifyType = determineNotificationType(videoData, videoRecord);
+            const update = {
+                title: videoData.title,
+                scheduledAt: videoData.live?.scheduledAt ?? null,
+                livedAt: videoData.live?.livedAt ?? null
+            };
+            channels.set(videoData.channelId, videoData.channelName);
             if (!notifyType) {
-                lock.delete(videoId);
+                db.update(t.youtubeVideo)
+                    .set(update)
+                    .where(sql`${t.youtubeVideo.id} = ${videoId}`)
+                    .run();
                 continue;
             }
             db.update(t.youtubeVideo)
                 .set({
-                    title: videoData.details.title,
-                    scheduledAt: videoData.schedule ?? null,
+                    ...update,
                     [`${notifyType.toLowerCase()}NotifiedAt`]: new Date()
                 })
                 .where(sql`${t.youtubeVideo.id} = ${videoId}`)
                 .run();
-            lock.delete(videoId);
-            console.log('[cron]', 'Notification detected', {
-                videoId,
-                videoType: videoRecord.type,
-                notifyType
-            });
-            await publishNotification(client, db, videoRecord.type as VideoType, videoData, notifyType);
+            console.log('[cron]', 'Notification detected', { videoData, notifyType });
+            await publishNotification(client, db, videoData, notifyType);
         }
     });
 }

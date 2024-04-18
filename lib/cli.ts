@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 
 import cac from 'cac';
-import { kClient, kDb, kFetcher, kOptions, kServer } from './symbols';
+import { kClient, kDb, kFetcher, kOptions, kServer, kYoutube } from './symbols';
 import { Client, IntentsBitField } from 'discord.js';
 import { startOptions } from './options';
 import { setupClient } from './client';
@@ -16,7 +16,7 @@ import { Context } from './ctx';
 import { APIDataFetcher } from './youtube/api';
 import { youtube } from '@googleapis/youtube';
 
-declare var MIGRATION_FOLDER: string;
+declare var MIGRATIONS_FOLDER: string;
 
 const env = Bun.env;
 
@@ -45,7 +45,10 @@ cli.command('', 'Run the bot')
         }
         const ctx = new Context();
 
-        ctx.set(kFetcher, new APIDataFetcher(youtube({ version: 'v3', auth: opts.data.gapiToken })));
+        const yt = youtube({ version: 'v3', auth: opts.data.gapiToken });
+
+        ctx.set(kYoutube, yt);
+        ctx.set(kFetcher, new APIDataFetcher(yt));
 
         let db = new Database(opts.data.database);
         let orm = drizzle(db, {
@@ -55,7 +58,7 @@ cli.command('', 'Run the bot')
         ctx.set(kDb, orm);
 
         migrate(orm, {
-            migrationsFolder: resolve(import.meta.dirname, MIGRATION_FOLDER)
+            migrationsFolder: resolve(import.meta.dirname, MIGRATIONS_FOLDER)
         });
 
         ctx.set(kOptions, opts.data);

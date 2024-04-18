@@ -1,4 +1,4 @@
-import { FetchError, InvalidURLError } from './types';
+import { FetchError, InvalidURLError, NotFoundError } from './types';
 
 class ScriptExtractor implements HTMLRewriterTypes.HTMLRewriterElementContentHandlers {
     public scripts: string[] = [];
@@ -114,17 +114,16 @@ function validateURL(url: string) {
 }
 
 async function extractScriptAndMeta(res: Response) {
+    if (res.status === 404) {
+        return undefined;
+    }
     if (res.status !== 200) {
         throw new FetchError(`Failed to fetch: ${res.status}`);
     }
     const se = new ScriptExtractor();
     const me = new MetaExtractor();
     const rewriter = new HTMLRewriter().on('script', se).on('meta', me);
-    const reader = rewriter.transform(res).body!.getReader();
-    let read = { done: false };
-    while (!read.done) {
-        read = await reader.read();
-    }
+    await rewriter.transform(res).arrayBuffer();
     return {
         scripts: se.scripts,
         meta: me.meta
@@ -151,6 +150,7 @@ export async function fetchChannelId(urlOrHandle: string) {
             }
         })
     );
+    if (!res) return undefined;
     if (res.meta.get('property/og:type') === 'video.other') {
         return findChannelId(res.scripts);
     }

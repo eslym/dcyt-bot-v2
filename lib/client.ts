@@ -22,7 +22,7 @@ import {
     type ModalMessageModalSubmitInteraction
 } from 'discord.js';
 import type { Context, ContextValue } from './ctx';
-import { kClient, kDb, kOptions } from './symbols';
+import { kClient, kDb, kOptions, kYoutube } from './symbols';
 import { lang } from './lang';
 import enHelp from './help/en.md';
 import cnHelp from './help/zh-CN.md';
@@ -36,6 +36,7 @@ import { count, sql } from 'drizzle-orm';
 import { getGuildData, upsertGuild } from './db/utils';
 import type { YoutubeSubscription } from './db/types';
 import { alias } from 'drizzle-orm/sqlite-core';
+import { fetchChannelId } from './youtube/crawler';
 
 Mustache.templateCache = undefined;
 
@@ -199,7 +200,7 @@ async function youtubeChannelInteraction(
         | StringSelectMenuInteraction
         | ButtonInteraction
         | ModalMessageModalSubmitInteraction,
-    videoData: ProfileCrawlResult,
+    ytChId: string,
     sub: YoutubeSubscription | null | undefined,
     targetChannel: string,
     l: (typeof lang)[string]
@@ -207,7 +208,7 @@ async function youtubeChannelInteraction(
     const rows = [
         new ActionRowBuilder<ButtonBuilder>().addComponents(
             new ButtonBuilder()
-                .setCustomId(`subscribe:${videoData.metadata.externalId}:${targetChannel}`)
+                .setCustomId(`subscribe:${ytChId}:${targetChannel}`)
                 .setLabel(sub ? l.ACTION.REMOVE : l.ACTION.ADD)
                 .setStyle(sub ? ButtonStyle.Secondary : ButtonStyle.Success)
                 .setEmoji(sub ? '❌' : '➕')
@@ -218,7 +219,7 @@ async function youtubeChannelInteraction(
         rows.push(
             new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
                 new StringSelectMenuBuilder()
-                    .setCustomId(`notify:${videoData.metadata.externalId}:${targetChannel}`)
+                    .setCustomId(`notify:${ytChId}:${targetChannel}`)
                     .setPlaceholder(l.HINT.SELECT_ENABLE)
                     .setMinValues(0)
                     .setMaxValues(categories.length)
@@ -233,7 +234,7 @@ async function youtubeChannelInteraction(
             ),
             new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
                 new StringSelectMenuBuilder()
-                    .setCustomId(`template:${videoData.metadata.externalId}:${targetChannel}`)
+                    .setCustomId(`template:${ytChId}:${targetChannel}`)
                     .setPlaceholder(l.HINT.SELECT_CATEGORY)
                     .setMinValues(1)
                     .setMaxValues(1)
@@ -247,28 +248,20 @@ async function youtubeChannelInteraction(
             )
         );
     }
-    const embed = new EmbedBuilder()
-        .setTitle(videoData.metadata.title)
-        .setThumbnail(videoData.metadata.avatar.thumbnails[0].url)
-        .setURL(videoData.metadata.channelUrl)
-        .setColor('#00ff00');
-    if (videoData.metadata.description) {
-        embed.setDescription(escapeDiscordMarkdown(videoData.metadata.description));
-    }
     await interaction.editReply({
-        content: Mustache.render(l.HINT.CHANNEL, { channel: targetChannel }),
-        embeds: [embed],
+        content: `# ${Mustache.render(l.HINT.CHANNEL, { channel: targetChannel })}\nhttps://youtube.com/channel/${ytChId}`,
         components: rows
     });
 }
 
 async function listSubscriptionInteraction(
-    db: ContextValue<typeof kDb>,
+    ctx: Context,
     interaction: ChatInputCommandInteraction | ButtonInteraction,
     l: (typeof lang)[string],
     dcCh: string,
     page: number = 1
 ) {
+    const [db, yt] = ctx.getAll(kDb, kYoutube);
     const total = db
         .select({
             count: count()
@@ -290,12 +283,37 @@ async function listSubscriptionInteraction(
         return;
     }
     const subscriptions = db
-        .select()
+        .select({
+            channelId: t.youtubeSubscription.youtubeChannelId,
+            channelName: t.youtubeChannel.title
+        })
         .from(t.youtubeSubscription)
+        .leftJoin(t.youtubeChannel, sql`${t.youtubeSubscription.youtubeChannelId} = ${t.youtubeChannel.id}`)
         .where(sql`${t.youtubeSubscription.guildChannelId} = ${dcCh}`)
         .offset((page - 1) * 5)
         .limit(5)
         .all();
+
+    const dict = new Map(subscriptions.map((sub) => [sub.channelId, sub] as const));
+    const missing = subscriptions.filter((sub) => !sub.channelName).map((sub) => sub.channelId);
+
+    if (missing.length) {
+        const res = await yt.channels.list({
+            id: missing,
+            part: ['id', 'snippet']
+        });
+        if (res.status === 200) {
+            for (const item of res.data?.items ?? []) {
+                db.update(t.youtubeChannel)
+                    .set({
+                        title: item.snippet?.title
+                    })
+                    .where(sql`${t.youtubeChannel.id} = ${item.id}`)
+                    .run();
+                dict.get(item.id!)!.channelName = item.snippet?.title!;
+            }
+        }
+    }
 
     const menu = new StringSelectMenuBuilder()
         .setCustomId(`list:${dcCh}:${page}`)
@@ -304,11 +322,9 @@ async function listSubscriptionInteraction(
         .setMaxValues(1);
 
     for (const sub of subscriptions) {
-        const chData = await getChannelData(`https://youtube.com/channel/${sub.youtubeChannelId}`);
         menu.addOptions({
-            value: sub.youtubeChannelId,
-            label: chData.metadata.title,
-            description: chData.metadata.description.substring(0, 50)
+            value: sub.channelId,
+            label: sub.channelName ?? 'Unknown Channel'
         });
     }
 
@@ -365,61 +381,32 @@ const commandHandlers: Record<string, (ctx: Context, interaction: ChatInputComma
     async inspect(ctx, interaction) {
         return getGuildId(ctx, interaction)
             .then(async (guildId) => {
-                let source = interaction.options.getString('channel', true);
+                const source = interaction.options.getString('channel', true);
                 await interaction.deferReply({
                     ephemeral: true
                 });
                 const db = ctx.get(kDb);
                 const guildData = getGuildData(db, guildId);
                 const l = lang[guildData.language ?? 'en'];
-                const targetChannel = interaction.options.getString('to', false) ?? interaction.channelId;
-                const result = await getChannelData(source).catch(async (err) => {
-                    if (err instanceof InvalidURLError) {
-                        await interaction.editReply({
-                            embeds: [
-                                new EmbedBuilder()
-                                    .setTitle('Error')
-                                    .setDescription(l.ERROR.INVALID_URL)
-                                    .setColor('#ff0000')
-                            ]
-                        });
-                        return;
-                    }
-                    if (err instanceof FetchError && err.status === 404) {
-                        await interaction.editReply({
-                            embeds: [
-                                new EmbedBuilder()
-                                    .setTitle('Error')
-                                    .setDescription(l.ERROR.NOT_FOUND)
-                                    .setColor('#ff0000')
-                            ]
-                        });
-                        return;
-                    }
+                const channelId = await fetchChannelId(source);
+                if (!channelId) {
                     await interaction.editReply({
-                        embeds: [
-                            new EmbedBuilder().setTitle('Error').setDescription(l.ERROR.UNKNOWN).setColor('#ff0000')
-                        ]
+                        content: l.ERROR.NOT_FOUND
                     });
-                    throw err;
-                });
-                if (!result) return;
+                    return;
+                }
+                const targetChannel = interaction.options.getString('to', false) ?? interaction.channelId;
                 const sub = db
                     .select()
                     .from(t.youtubeSubscription)
                     .where(
-                        sql`${t.youtubeSubscription.guildChannelId} = ${targetChannel} AND ${t.youtubeSubscription.youtubeChannelId} = ${result.metadata.externalId}`
+                        sql`${t.youtubeSubscription.guildChannelId} = ${targetChannel} AND ${t.youtubeSubscription.youtubeChannelId} = ${channelId}`
                     )
                     .get();
-                await youtubeChannelInteraction(interaction, result, sub, targetChannel, l);
+                await youtubeChannelInteraction(interaction, channelId, sub, targetChannel, l);
             })
             .catch(async (err) => {
                 if (err === true) return;
-                if (err instanceof CrawlError) {
-                    await interaction.editReply({
-                        embeds: [new EmbedBuilder().setTitle('Error').setDescription(err.message).setColor('#ff0000')]
-                    });
-                }
                 console.error(err);
             });
     },
@@ -429,7 +416,7 @@ const commandHandlers: Record<string, (ctx: Context, interaction: ChatInputComma
                 const ch = interaction.options.getChannel<ValidChannelTypes>('channel', false);
                 const guildData = getGuildData(ctx.get(kDb), guildId);
                 const l = lang[guildData.language ?? 'en'];
-                await listSubscriptionInteraction(ctx.get(kDb), interaction, l, ch?.id ?? interaction.channelId);
+                await listSubscriptionInteraction(ctx, interaction, l, ch?.id ?? interaction.channelId);
             })
             .catch((err) => {
                 if (err === true) return;
@@ -537,14 +524,9 @@ const selectMenuHandlers: Record<string, (ctx: Context, interaction: StringSelec
                         update[`notify${ucfirst(category)}`] = interaction.values.includes(category);
                     }
                     db.update(t.youtubeSubscription).set(update).where(where).run();
-                    const result = await cache.get(
-                        `https://youtube.com/channel/${source}`,
-                        () => fetchProfile(`https://youtube.com/channel/${source}`),
-                        600000
-                    );
                     await youtubeChannelInteraction(
                         interaction,
-                        result,
+                        source,
                         sub,
                         targetChannel,
                         lang[guildData.language ?? 'en']
@@ -626,12 +608,7 @@ const selectMenuHandlers: Record<string, (ctx: Context, interaction: StringSelec
                     await interaction.deferReply({
                         ephemeral: true
                     });
-                    const result = await cache.get(
-                        `https://youtube.com/channel/${ytCh}`,
-                        () => fetchProfile(`https://youtube.com/channel/${ytCh}`),
-                        600000
-                    );
-                    await youtubeChannelInteraction(interaction, result, sub, dcCh, l);
+                    await youtubeChannelInteraction(interaction, ytCh, sub, dcCh, l);
                 })
                 .catch((err) => {
                     if (err === true) return;
@@ -706,14 +683,9 @@ const modalHandlers: Record<string, (ctx: Context, interaction: ModalSubmitInter
                     .run();
                 if (interaction.isFromMessage()) {
                     interaction.deferUpdate();
-                    const result = await cache.get(
-                        `https://youtube.com/channel/${source}`,
-                        () => fetchProfile(`https://youtube.com/channel/${source}`),
-                        600000
-                    );
                     await youtubeChannelInteraction(
                         interaction,
-                        result,
+                        source,
                         sub,
                         targetChannel,
                         lang[guildData.language ?? 'en']
@@ -735,7 +707,6 @@ const buttonHandlers: Record<string, (ctx: Context, interaction: ButtonInteracti
                 await interaction.deferUpdate();
                 const guildData = getGuildData(db, guildId);
                 const [source, targetChannel] = interaction.customId.substring('subscribe:'.length).split(':');
-                const result = await getChannelData(`https://youtube.com/channel/${source}`);
                 const deleted = db
                     .delete(t.youtubeSubscription)
                     .where(
@@ -747,7 +718,7 @@ const buttonHandlers: Record<string, (ctx: Context, interaction: ButtonInteracti
                     queueMicrotask(() => checkSubs(ctx, source).catch(console.error));
                     return youtubeChannelInteraction(
                         interaction,
-                        result,
+                        source,
                         null,
                         targetChannel,
                         lang[guildData.language ?? 'en']
@@ -787,7 +758,7 @@ const buttonHandlers: Record<string, (ctx: Context, interaction: ButtonInteracti
                 queueMicrotask(() => checkSubs(ctx, source).catch(console.error));
                 await youtubeChannelInteraction(
                     interaction,
-                    result,
+                    source,
                     sub,
                     targetChannel,
                     lang[guildData.language ?? 'en']
@@ -805,7 +776,7 @@ const buttonHandlers: Record<string, (ctx: Context, interaction: ButtonInteracti
             .then(async (guildId) => {
                 const guildData = getGuildData(db, guildId);
                 const l = lang[guildData.language ?? 'en'];
-                await listSubscriptionInteraction(db, interaction, l, dcCh, parseInt(page));
+                await listSubscriptionInteraction(ctx, interaction, l, dcCh, parseInt(page));
             })
             .catch((err) => {
                 if (err === true) return;

@@ -37,6 +37,7 @@ export const youtubeChannel = sqliteTable(
     'YoutubeChannel',
     {
         id: text('id').primaryKey().notNull(),
+        title: text('title'),
         webhookId: text('webhookId')
             .$defaultFn(() => ulid())
             .notNull(),
@@ -59,6 +60,7 @@ export const youtubeVideo = sqliteTable('YoutubeVideo', {
     type: text('type').notNull(),
     title: text('title').notNull(),
     scheduledAt: integer('scheduledAt', { mode: 'timestamp_ms' }),
+    livedAt: integer('livedAt', { mode: 'timestamp_ms' }),
     deletedAt: integer('deletedAt', { mode: 'timestamp_ms' }),
     publishNotifiedAt: integer('publishNotifiedAt', { mode: 'timestamp_ms' }),
     scheduleNotifiedAt: integer('scheduleNotifiedAt', { mode: 'timestamp_ms' }),
