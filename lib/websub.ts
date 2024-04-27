@@ -210,9 +210,12 @@ async function videoCallback(ctx: Context, ch: YoutubeChannel, body: Buffer) {
     if (videoRecord.type === VideoType.VIDEO) {
         return;
     }
-    if (videoRecord.deletedAt) {
+    if (videoRecord.deletedAt || videoRecord.livedAt) {
         db.update(t.youtubeVideo)
             .set({
+                title: videoData.title,
+                scheduledAt: videoData.live?.scheduledAt ?? null,
+                livedAt: videoData.live?.livedAt ?? null,
                 deletedAt: null
             })
             .where(sql`${t.youtubeVideo.id} = ${videoId}`)
