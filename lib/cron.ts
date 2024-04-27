@@ -46,12 +46,14 @@ export function setupCron(ctx: Context) {
     });
 
     cron.schedule('*/5 * * * *', async () => {
+        const notLived = sql`${t.youtubeVideo.livedAt} IS NULL`;
+        const notNotified = sql`${t.youtubeVideo.liveNotifiedAt} IS NULL`;
+        const notDeleted = sql`${t.youtubeVideo.deletedAt} IS NULL`;
+        const criteria = sql`${notLived} AND ${notNotified} AND ${notDeleted}`;
         const records = db
             .select()
             .from(t.youtubeVideo)
-            .where(
-                sql`${t.youtubeVideo.type} IN ${[VideoType.LIVE, VideoType.PREMIERE]} AND ((${t.youtubeVideo.liveNotifiedAt} IS NULL AND ${t.youtubeVideo.upcomingNotifiedAt} IS NULL) OR ${t.youtubeVideo.livedAt} IS NULL) AND ${t.youtubeVideo.deletedAt} IS NULL`
-            )
+            .where(sql`${t.youtubeVideo.type} IN ${[VideoType.LIVE, VideoType.PREMIERE]} AND ${criteria}`)
             .all();
         if (!records.length) return;
         const videoDatas = new Map<string, YoutubeVideoData | Error>(
