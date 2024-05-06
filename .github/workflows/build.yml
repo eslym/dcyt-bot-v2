@@ -1,0 +1,20 @@
+name: Build
+on:
+  - push
+
+jobs:
+  build-artifacts:
+    name: Build Artifacts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: oven-sh/setup-bun@v1
+        with:
+          # newer version of bun is currently having issue with build
+          # see https://github.com/oven-sh/bun/issues/10851
+          bun-version: 1.1.4
+      - run: bun install --ignore-scripts --no-progress
+      - run: bun build/index.ts
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist
