@@ -41,7 +41,6 @@ x-logging: &logging
 services:
     app:
         image: eslym/discord-youtube-bot
-        build: .
         command: bun index.ts
         user: '1000:1000'
         working_dir: /home/bun/app
@@ -59,8 +58,6 @@ services:
         image: cloudflare/cloudflared:latest
         command: tunnel --no-autoupdate run
         restart: always
-        networks:
-            - cloudflared
         logging: *logging
 
 volumes:
