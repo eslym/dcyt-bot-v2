@@ -1,4 +1,4 @@
-FROM oven/bun:1.1.7-alpine AS builder
+FROM oven/bun:1.1.4-alpine AS builder
 
 COPY . /home/bun/app
 
