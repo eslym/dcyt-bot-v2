@@ -34,7 +34,7 @@
   },
   "optionalDependencies": {
     "better-sqlite3": "^9.4.5",
-    "drizzle-kit": "^0.20.14"
+    "drizzle-kit": "^0.21.1"
   },
   "type": "module"
 }
