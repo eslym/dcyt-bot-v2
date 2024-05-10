@@ -1,5 +1,4 @@
 import { chmodSync } from 'fs';
-import pkg from '../package.json';
 import { $ } from 'bun';
 import { resolve } from 'path';
 
@@ -47,6 +46,20 @@ const bundle = await Bun.build({
                 build.onLoad({ filter: /\.md$/ }, async ({ path }) => {
                     return {
                         contents: `export default ${JSON.stringify(await Bun.file(path).text())}`,
+                        loader: 'js'
+                    };
+                });
+            }
+        },
+        {
+            // Temporary fix for https://github.com/oven-sh/bun/issues/10851
+            name: 'import-json',
+            target: 'bun',
+            setup(build) {
+                build.onLoad({ filter: /\.json$/ }, async ({ path }) => {
+                    const data = await Bun.file(path).json();
+                    return {
+                        contents: `export default ${JSON.stringify(data)};`,
                         loader: 'js'
                     };
                 });
