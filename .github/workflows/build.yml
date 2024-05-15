@@ -1,6 +1,7 @@
 name: Build
 on:
   - push
+  - workflow_dispatch
 
 jobs:
   build-artifacts:
@@ -9,10 +10,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v1
-        with:
-          # newer version of bun is currently having issue with build
-          # see https://github.com/oven-sh/bun/issues/10851
-          bun-version: 1.1.4
       - run: bun install --ignore-scripts --no-progress
       - run: bun build/index.ts
       - uses: actions/upload-artifact@v4
