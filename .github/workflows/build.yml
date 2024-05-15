@@ -1,33 +1,17 @@
-name: Build
+name: Build Image
 on:
   - push
   - workflow_dispatch
 
 jobs:
-  build-artifacts:
-    name: Build Artifacts
+  build-image:
+    name: Build Docker Image
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v1
       - run: bun install --ignore-scripts --no-progress
       - run: bun build/index.ts
-      - uses: actions/upload-artifact@v4
-        with:
-          name: dist
-          path: dist
-
-  build-docker-image:
-    name: Build Docker Image
-    runs-on: ubuntu-latest
-    needs: build-artifacts
-    steps:
-      - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v1
-      - uses: actions/download-artifact@v4
-        with:
-          name: dist
-          path: dist
       - id: meta
         uses: docker/metadata-action@v5
         with:
