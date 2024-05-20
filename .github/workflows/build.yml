@@ -13,16 +13,7 @@ jobs:
       - run: bun install --ignore-scripts --no-progress
       - run: bun build/index.ts
       - id: meta
-        uses: docker/metadata-action@v5
-        with:
-          # list of Docker images to use as base name for tags
-          images: ${{ vars.DOCKER_IMAGE }}
-          # generate Docker tags based on the following events/attributes
-          tags: |
-            type=raw,value=latest-${{ runner.arch }}
-            type=semver,pattern={{version}}-${{ runner.arch }}
-            type=semver,pattern={{major}}.{{minor}}-${{ runner.arch }}
-            type=semver,pattern={{major}}-${{ runner.arch }}
+        run: bun build/generate-tags.ts ${{ vars.DOCKER_IMAGE }}
       - uses: docker/setup-qemu-action@v3
       - uses: docker/setup-buildx-action@v3
       - uses: docker/login-action@v3
