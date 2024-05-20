@@ -26,4 +26,4 @@ const result = baseTags.map((t) => `${image}:${t}-${arch}`);
 
 console.log('Tags: ', result);
 
-Bun.write(process.env.GITHUB_OUTPUT!, `tags=${result.join(',')}\nbase-tags${baseTags.join(',')}`);
+Bun.write(process.env.GITHUB_OUTPUT!, `tags=${result.join(',')}\nbase-tags=${baseTags.join(',')}`);
