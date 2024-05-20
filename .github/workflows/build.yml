@@ -26,3 +26,6 @@ jobs:
           file: Dockerfile.github
           push: true
           tags: ${{ steps.meta.outputs.tags }}
+      - run: bun build/generate-manifest.ts ${{ vars.DOCKER_IMAGE }}
+        env:
+          BASE_TAGS: ${{ steps.meta.outputs.tags }}

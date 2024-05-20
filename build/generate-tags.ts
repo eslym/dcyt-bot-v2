@@ -21,8 +21,9 @@ if (ref === 'refs/heads/main') {
 }
 
 const image = Bun.argv[2];
-const result = [...tags].map((t) => `${image}:${t}-${arch}`).join(',');
+const baseTags = [...tags];
+const result = baseTags.map((t) => `${image}:${t}-${arch}`);
 
 console.log('Tags: ', result);
 
-Bun.write(process.env.GITHUB_OUTPUT!, `tags=${result}`);
+Bun.write(process.env.GITHUB_OUTPUT!, `tags=${result.join(',')}\nbase-tags${baseTags.join(',')}`);
