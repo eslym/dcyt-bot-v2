@@ -8,16 +8,16 @@ const tags = new Set<string>();
 if (ref?.startsWith('refs/tags')) {
     const match = /^refs\/tags\/v?(\d+)\.(\d+)\.(\d+)$/.exec(ref);
     if (match) {
-        tags.add(match[1]);
-        tags.add(`${match[1]}.${match[2]}`);
-        tags.add(`${match[1]}.${match[2]}.${match[3]}`);
+        tags.add(`v${match[1]}`);
+        tags.add(`v${match[1]}.${match[2]}`);
+        tags.add(`v${match[1]}.${match[2]}.${match[3]}`);
         tags.add('latest');
     }
 }
 
 if (ref === 'refs/heads/main') {
     tags.add(`nightly`);
-    tags.add(`nightly-${sha.substring(0, 7)}`);
+    tags.add(`${sha.substring(0, 7)}`);
 }
 
 const image = Bun.argv[2];
