@@ -1,8 +1,6 @@
 const sha = process.env.GITHUB_SHA!;
 const ref = process.env.GITHUB_REF;
 
-const arch = process.arch;
-
 const tags = new Set<string>();
 
 if (ref?.startsWith('refs/tags')) {
@@ -22,7 +20,7 @@ if (ref === 'refs/heads/main') {
 
 const image = Bun.argv[2];
 const baseTags = [...tags];
-const result = baseTags.map((t) => `${image}:${t}-${arch}`);
+const result = baseTags.map((t) => `${image}:${t}`);
 
 console.log('Tags: ', result);
 

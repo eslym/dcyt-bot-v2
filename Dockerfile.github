@@ -1,4 +1,4 @@
-FROM oven/bun:1.1.9-distroless
+FROM oven/bun:1.1.12-distroless
 
 COPY ./dist /home/bun/app
 

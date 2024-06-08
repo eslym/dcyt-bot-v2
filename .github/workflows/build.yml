@@ -11,7 +11,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v1
         with:
-          bun-version: 1.1.9
+          bun-version: 1.1.12
       - run: bun install --ignore-scripts --no-progress
       - run: bun build/index.ts
       - id: meta
@@ -29,7 +29,5 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: |
-            git.commit="${{ github.sha }}"
-      - run: bun build/generate-manifest.ts ${{ vars.DOCKER_IMAGE }}
-        env:
-          BASE_TAGS: ${{ steps.meta.outputs.base-tags }}
+            org.opencontainers.image.ur="${{ github.repositoryUrl }}"
+          platforms: linux/amd64,linux/arm64
