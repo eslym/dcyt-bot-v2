@@ -18,7 +18,7 @@ export function determineNotificationType(
     videoData: YoutubeVideoData,
     videoRecord: YoutubeVideo
 ): NotificationType | undefined {
-    if (videoRecord.type === VideoType.VIDEO || !videoData.live) {
+    if (videoRecord.type === VideoType.VIDEO || !videoData.live || videoData.live.endedAt) {
         return;
     }
     if (videoData.live.livedAt) {
