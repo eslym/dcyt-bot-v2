@@ -32,3 +32,5 @@ jobs:
           labels: |
             org.opencontainers.image.url="${{ github.repositoryUrl }}"
           platforms: linux/amd64,linux/arm64
+          build-args: |
+            BUN_VERSION=${{ steps.setup-bun.outputs.bun-version }}
