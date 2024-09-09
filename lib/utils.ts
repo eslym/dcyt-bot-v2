@@ -85,3 +85,6 @@ export async function publishNotification(
         }
     }
 }
+
+export function noop(...args: any[]): undefined;
+export function noop(): undefined {}

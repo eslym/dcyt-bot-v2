@@ -99,6 +99,7 @@ cli.command('', 'Run the bot')
 
         process.once('SIGINT', cleanup);
         process.once('SIGTERM', cleanup);
+        process.once('SIGKILL', cleanup);
 
         await setupClient(ctx);
     });

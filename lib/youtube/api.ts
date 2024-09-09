@@ -1,4 +1,5 @@
 import { VideoType } from '../enum';
+import { noop } from '../utils';
 import { FetchError, NotFoundError, type DataFetcher, type YoutubeVideoData } from './types';
 import type { youtube_v3 } from '@googleapis/youtube';
 
@@ -14,7 +15,7 @@ export class APIDataFetcher implements DataFetcher {
     fetchVideoData(videoId: string): Promise<YoutubeVideoData> {
         return new Promise((resolve, reject) => {
             this.#videoQueues.push([videoId, resolve, reject]);
-            if (this.#shouldRunQueue) queueMicrotask(() => this.#runQueue());
+            if (this.#shouldRunQueue) queueMicrotask(this.#runQueue.bind(this));
         });
     }
 
@@ -35,7 +36,7 @@ export class APIDataFetcher implements DataFetcher {
                 part: ['id', 'snippet', 'liveStreamingDetails', 'contentDetails'],
                 maxResults: 50
             })
-            .catch(() => null);
+            .catch(noop);
         if (!res) {
             for (const [_, __, reject] of queue) {
                 reject(new FetchError('Failed to fetch video data'));
