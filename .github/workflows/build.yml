@@ -13,7 +13,7 @@ jobs:
         uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: .bun-version
-      - run: bun install --ignore-scripts --no-progress
+      - run: bun install --ignore-scripts --no-progress --no-optional --no-save
       - run: bun build/index.ts
       - id: meta
         run: bun build/generate-tags.ts ${{ vars.DOCKER_IMAGE }}

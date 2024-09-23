@@ -153,7 +153,9 @@ async function getGuildId(
     return guildId;
 }
 
-type MessageComponents = Exclude<BaseMessageOptions['components'], undefined>;
+type Mutable<T> = T extends readonly (infer U)[] ? U[] : never;
+
+type MessageComponents = Mutable<BaseMessageOptions['components']>;
 
 function configComponents(locale: string, channelId?: string): MessageComponents {
     const l = lang[locale];

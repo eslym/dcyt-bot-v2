@@ -6,35 +6,35 @@
   },
   "devDependencies": {
     "@googleapis/youtube": "^14.0.0",
-    "@rollup/plugin-commonjs": "^25.0.7",
+    "@rollup/plugin-commonjs": "^25.0.8",
     "@rollup/plugin-json": "^6.1.0",
-    "@rollup/plugin-node-resolve": "^15.2.3",
-    "@rollup/plugin-replace": "^5.0.5",
+    "@rollup/plugin-node-resolve": "^15.2.4",
+    "@rollup/plugin-replace": "^5.0.7",
     "@rollup/plugin-typescript": "^11.1.6",
     "@rollup/plugin-virtual": "^3.0.2",
-    "@rollup/pluginutils": "^5.1.0",
+    "@rollup/pluginutils": "^5.1.1",
     "@types/mustache": "^4.2.5",
     "@types/node-cron": "^3.0.11",
-    "bun-types": "^1.1.4",
+    "bun-types": "^1.1.29",
     "cac": "^6.7.14",
-    "discord.js": "^14.14.1",
+    "discord.js": "^14.16.2",
     "mustache": "^4.2.0",
     "node-cron": "^3.0.3",
-    "prettier": "^3.2.5",
-    "rollup": "^4.14.3",
-    "ulidx": "^2.3.0",
+    "prettier": "^3.3.3",
+    "rollup": "^4.22.4",
+    "ulidx": "^2.4.1",
     "xmlbuilder2": "^3.1.1",
-    "zod": "^3.22.4"
+    "zod": "^3.23.8"
   },
   "dependencies": {
-    "drizzle-orm": "^0.30.7"
+    "drizzle-orm": "^0.30.10"
   },
   "peerDependencies": {
-    "typescript": "^5.0.0"
+    "typescript": "^5.4.3"
   },
   "optionalDependencies": {
-    "better-sqlite3": "^9.4.5",
-    "drizzle-kit": "^0.21.1"
+    "better-sqlite3": "^9.6.0",
+    "drizzle-kit": "^0.21.4"
   },
   "type": "module"
 }

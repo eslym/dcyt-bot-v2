@@ -1,4 +1,4 @@
-import type { Client, TextBasedChannel } from 'discord.js';
+import type { Client, SendableChannels, TextBasedChannel } from 'discord.js';
 import type { ContextValue } from './ctx';
 import type { YoutubeVideo } from './db/types';
 import { NotificationType, VideoType } from './enum';
@@ -67,7 +67,7 @@ export async function publishNotification(
 
     for (const sub of subscriptions) {
         try {
-            const ch = (await client.channels.fetch(sub.channelId)) as TextBasedChannel;
+            const ch = (await client.channels.fetch(sub.channelId)) as SendableChannels;
             const l = lang[sub.language ?? 'en'];
             const template = sub[field] ?? sub[field + 'Channel'] ?? sub[field + 'Guild'] ?? l.NOTIFICATION[notifyType];
             const data: any = {
@@ -88,3 +88,7 @@ export async function publishNotification(
 
 export function noop(...args: any[]): undefined;
 export function noop(): undefined {}
+
+export function withCatch(fn: () => Promise<any>, module: string): () => Promise<void> {
+    return () => fn().catch(console.error.bind(console, module));
+}

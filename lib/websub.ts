@@ -1,9 +1,9 @@
-import type { Context } from './ctx';
+import type { Context, ContextValue } from './ctx';
 import { kClient, kDb, kFetcher, kOptions } from './symbols';
 import { createHmac } from 'crypto';
 import { convert } from 'xmlbuilder2';
 import { NotificationType, VideoType } from './enum';
-import { determineNotificationType, publishNotification } from './utils';
+import { determineNotificationType, publishNotification, withCatch } from './utils';
 import * as t from './db/schema';
 import { count, sql } from 'drizzle-orm';
 import type { YoutubeChannel } from './db/types';
@@ -61,7 +61,7 @@ export async function handleWebSub(ctx: Context, req: Request): Promise<Response
                 }
             });
         }
-        queueMicrotask(() => videoCallback(ctx, ytCh, buffer).catch((err) => console.error('[http]', err)));
+        queueMicrotask(withCatch(videoCallback.bind(null, ctx, ytCh, buffer), '[http]'));
         return new Response('OK', { status: 200, headers: { 'Content-Type': 'text/plain' } });
     }
     if (!url.searchParams.has('hub.challenge')) {
@@ -73,36 +73,7 @@ export async function handleWebSub(ctx: Context, req: Request): Promise<Response
         });
     }
     const mode = url.searchParams.get('hub.mode')!;
-    queueMicrotask(async () => {
-        if (mode === 'subscribe') {
-            if (!url.searchParams.has('hub.lease_seconds')) {
-                return;
-            }
-            const lease = parseInt(url.searchParams.get('hub.lease_seconds')!);
-            if (isNaN(lease) || lease < 300) return;
-            const expires = new Date(Date.now() + lease * 1000);
-            db.update(t.youtubeChannel)
-                .set({
-                    webhookExpiresAt: expires
-                })
-                .where(sql`${t.youtubeChannel.webhookId} = ${id}`)
-                .run();
-            if (ytCh.webhookExpiresAt) {
-                console.log('[http]', `Subscription for https://youtube.com/channel/${ytCh.id} renewed.`);
-            } else {
-                console.log('[http]', `Subscribed to https://youtube.com/channel/${ytCh.id}`);
-            }
-            return;
-        }
-        db.update(t.youtubeChannel)
-            .set({
-                webhookExpiresAt: null,
-                webhookSecret: null
-            })
-            .where(sql`${t.youtubeChannel.webhookId} = ${id}`)
-            .run();
-        console.log('[http]', `Unsubscribed from https://youtube.com/channel/${ytCh.id}`);
-    });
+    queueMicrotask(withCatch(subscribeCallback.bind(null, mode, url, db, id, ytCh), '[http]'));
     return new Response(url.searchParams.get('hub.challenge'), {
         status: 200,
         headers: {
@@ -237,6 +208,43 @@ async function videoCallback(ctx: Context, ch: YoutubeChannel, body: Buffer) {
         .run();
     console.log('[http]', 'Incoming notification', { videoData, notifyType });
     publishNotification(ctx.get(kClient), db, videoData, notifyType);
+}
+
+export async function subscribeCallback(
+    mode: string,
+    url: URL,
+    db: ContextValue<typeof kDb>,
+    id: string,
+    ytCh: YoutubeChannel
+) {
+    if (mode === 'subscribe') {
+        if (!url.searchParams.has('hub.lease_seconds')) {
+            return;
+        }
+        const lease = parseInt(url.searchParams.get('hub.lease_seconds')!);
+        if (isNaN(lease) || lease < 300) return;
+        const expires = new Date(Date.now() + lease * 1000);
+        db.update(t.youtubeChannel)
+            .set({
+                webhookExpiresAt: expires
+            })
+            .where(sql`${t.youtubeChannel.webhookId} = ${id}`)
+            .run();
+        if (ytCh.webhookExpiresAt) {
+            console.log('[http]', `Subscription for https://youtube.com/channel/${ytCh.id} renewed.`);
+        } else {
+            console.log('[http]', `Subscribed to https://youtube.com/channel/${ytCh.id}`);
+        }
+        return;
+    }
+    db.update(t.youtubeChannel)
+        .set({
+            webhookExpiresAt: null,
+            webhookSecret: null
+        })
+        .where(sql`${t.youtubeChannel.webhookId} = ${id}`)
+        .run();
+    console.log('[http]', `Unsubscribed from https://youtube.com/channel/${ytCh.id}`);
 }
 
 const env = Bun.env;

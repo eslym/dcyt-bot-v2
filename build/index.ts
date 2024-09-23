@@ -96,16 +96,14 @@ console.log();
 console.time('build drizzle-lib');
 const drizzle = await Bun.build({
     entrypoints: [
-        './build/drizzle/drizzle-orm.ts',
+        './build/drizzle/index.ts',
         './build/drizzle/sqlite-core.ts',
         './build/drizzle/bun-sqlite.ts',
         './build/drizzle/migrator.ts'
     ],
-    outdir: resolve(outdir, 'drizzle/lib'),
+    outdir: resolve(outdir, 'node_modules/drizzle-orm'),
     target: 'bun',
-    minify: {
-        syntax: true
-    },
+    minify: true,
     splitting: true
 });
 console.timeEnd('build drizzle-lib');
@@ -121,13 +119,29 @@ for (const file of drizzle.outputs) {
 
 drizzle.logs.forEach((log) => console.log(log));
 
-const index = await Bun.file(resolve(outdir, 'index.js')).text();
+const pkgJson = await Bun.file('node_modules/drizzle-orm/package.json').json();
 
 await Bun.write(
-    resolve(outdir, 'index.js'),
-    index
-        .replaceAll('from "drizzle-orm"', 'from "./drizzle/lib/drizzle-orm"')
-        .replaceAll('from "drizzle-orm/sqlite-core"', 'from "./drizzle/lib/sqlite-core"')
-        .replaceAll('from "drizzle-orm/bun-sqlite"', 'from "./drizzle/lib/bun-sqlite"')
-        .replaceAll('from "drizzle-orm/bun-sqlite/migrator"', 'from "./drizzle/lib/migrator"')
+    resolve(outdir, 'node_modules/drizzle-orm/package.json'),
+    JSON.stringify({
+        name: pkgJson.name,
+        version: pkgJson.version,
+        description: pkgJson.description,
+        type: 'module',
+        main: 'index.js',
+        exports: {
+            '.': {
+                import: './index.js'
+            },
+            './sqlite-core': {
+                import: './sqlite-core.js'
+            },
+            './bun-sqlite': {
+                import: './bun-sqlite.js'
+            },
+            './bun-sqlite/migrator': {
+                import: './migrator.js'
+            }
+        }
+    })
 );
