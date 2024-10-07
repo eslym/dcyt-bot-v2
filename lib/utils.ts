@@ -1,4 +1,4 @@
-import type { Client, SendableChannels, TextBasedChannel } from 'discord.js';
+import type { Client, SendableChannels } from 'discord.js';
 import type { ContextValue } from './ctx';
 import type { YoutubeVideo } from './db/types';
 import { NotificationType, VideoType } from './enum';

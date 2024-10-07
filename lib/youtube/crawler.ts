@@ -164,3 +164,39 @@ export async function fetchChannelId(urlOrHandle: string) {
     const match = /^\/channel\/([^\/]+)/.exec(url.pathname);
     return match?.[1];
 }
+
+class CanonicalLinkFinder implements HTMLRewriterTypes.HTMLRewriterElementContentHandlers {
+    public links: string[] = [];
+
+    element(element: HTMLRewriterTypes.Element): void {
+        if (element.hasAttribute('rel') && element.getAttribute('rel') === 'canonical') {
+            this.links.push(element.getAttribute('href') ?? '');
+        }
+    }
+}
+
+async function crawlCanonicalLink(url: string | URL): Promise<string[]> {
+    const res = await fetch(url);
+    if (!res.ok) {
+        throw new Error(`Failed to fetch ${url}`);
+    }
+    const finder = new CanonicalLinkFinder();
+    const rewriter = new HTMLRewriter();
+    rewriter.on('link', finder);
+    await rewriter.transform(res).arrayBuffer();
+    return finder.links;
+}
+
+export async function fetchLiveID(channel: string) {
+    const link = `https://www.youtube.com/channel/${channel}/live`;
+    const href = await crawlCanonicalLink(link);
+    if (!href.length) {
+        return null;
+    }
+    const url = new URL(href[0]);
+    if (url.pathname !== '/watch' || !url.searchParams.has('v')) {
+        return null;
+    }
+    const videoId = url.searchParams.get('v')!;
+    return videoId;
+}

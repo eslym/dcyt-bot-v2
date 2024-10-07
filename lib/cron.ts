@@ -2,12 +2,13 @@ import type { Context } from './ctx';
 import { kClient, kDb, kFetcher, kOptions } from './symbols';
 import cron from 'node-cron';
 import { postWebsub, topicUrl } from './websub';
-import { VideoType } from './enum';
+import { NotificationType, VideoType } from './enum';
 import { determineNotificationType, publishNotification } from './utils';
 import * as t from './db/schema';
-import { sql } from 'drizzle-orm';
+import { count, sql } from 'drizzle-orm';
 import { randomBytes } from 'crypto';
 import { NotFoundError, type YoutubeVideoData } from './youtube/types';
+import { fetchLiveID } from './youtube/crawler';
 
 export function setupCron(ctx: Context) {
     const [client, db, opts, fetcher] = ctx.getAll(kClient, kDb, kOptions, kFetcher);
@@ -41,6 +42,59 @@ export function setupCron(ctx: Context) {
                     status: res.status,
                     body: await res.text()
                 });
+            }
+        }
+    });
+
+    cron.schedule('*/15 * * * *', async () => {
+        const chs = db
+            .select({ id: t.youtubeChannel.id })
+            .from(t.youtubeChannel)
+            .where(sql`${t.youtubeChannel.webhookSecret} IS NOT NULL`)
+            .all()
+            .map((ch) => ch.id);
+
+        while (chs.length) {
+            const ids = chs.splice(0, 10);
+            const videos = await Promise.allSettled(ids.map((id) => fetchLiveID(id)));
+            for (const [i, video] of videos.entries()) {
+                if (video.status === 'rejected') {
+                    console.error('[cron]', `Failed to fetch live ID for ${ids[i]}`, video.reason);
+                    continue;
+                }
+                if (!video.value) {
+                    continue;
+                }
+                const exists = db
+                    .select({ count: count(t.youtubeVideo.id) })
+                    .from(t.youtubeVideo)
+                    .where(sql`${t.youtubeVideo.id} = ${video.value}`)
+                    .get()!.count;
+                if (exists) {
+                    continue;
+                }
+                const videoData = await fetcher.fetchVideoData(video.value);
+                const notifyType =
+                    videoData.type === 'VIDEO'
+                        ? NotificationType.PUBLISH
+                        : videoData.live?.livedAt
+                          ? NotificationType.LIVE
+                          : NotificationType.SCHEDULE;
+                db.insert(t.youtubeVideo)
+                    .values({
+                        id: videoData.id,
+                        channelId: videoData.channelId,
+                        title: videoData.title,
+                        type: videoData.type,
+                        scheduledAt: videoData.live?.scheduledAt,
+                        [`${notifyType.toLowerCase()}NotifiedAt`]: new Date()
+                    })
+                    .run();
+                if (videoData.live?.endedAt) {
+                    return;
+                }
+                console.log('[cron]', 'Found live', { videoData, notifyType });
+                publishNotification(ctx.get(kClient), db, videoData, notifyType);
             }
         }
     });

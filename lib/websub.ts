@@ -52,7 +52,12 @@ export async function handleWebSub(ctx: Context, req: Request): Promise<Response
         }
         const [algo, sig] = req.headers.get('x-hub-signature')!.split('=');
         const buffer = Buffer.from(await req.arrayBuffer());
-        if (sig.toLowerCase() !== createHmac(algo, ytCh.webhookSecret!).update(buffer).digest('hex')) {
+        if (
+            sig.toLowerCase() !==
+            createHmac(algo, ytCh.webhookSecret!)
+                .update(buffer as any)
+                .digest('hex')
+        ) {
             console.warn('[http]', 'Invalid signature', { id });
             return new Response('403 Forbidden', {
                 status: 403,
