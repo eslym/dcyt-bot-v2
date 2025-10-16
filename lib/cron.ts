@@ -90,7 +90,7 @@ export function setupCron(ctx: Context) {
                         [`${notifyType.toLowerCase()}NotifiedAt`]: new Date()
                     })
                     .run();
-                if (videoData.live?.endedAt) {
+                if ((!videoData.live?.livedAt && !videoData.live?.scheduledAt) || videoData.live?.endedAt) {
                     return;
                 }
                 console.log('[cron]', 'Found live', { videoData, notifyType });
