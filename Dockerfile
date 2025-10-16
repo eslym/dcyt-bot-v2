@@ -8,10 +8,10 @@ WORKDIR /home/bun/app
 
 RUN bun install --ignore-scripts --no-progress && bun build/index.ts
 
-FROM oven/bun:${BUN_VERSION}-distroless
+FROM oven/bun:${BUN_VERSION}-alpine
 
 COPY --from=builder /home/bun/app/dist /home/bun/app
 
 WORKDIR /home/bun/app
 
-CMD ["index.js"]
+CMD ["bun", "index.js"]

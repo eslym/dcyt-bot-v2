@@ -1,9 +1,9 @@
 ARG BUN_VERSION
 
-FROM oven/bun:${BUN_VERSION}-distroless
+FROM oven/bun:${BUN_VERSION}-alpine
 
 COPY ./dist /home/bun/app
 
 WORKDIR /home/bun/app
 
-CMD ["index.js"]
+CMD ["bun", "index.js"]
