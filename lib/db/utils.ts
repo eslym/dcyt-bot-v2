@@ -7,25 +7,25 @@ import { sql } from 'drizzle-orm';
 type DB = ContextValue<typeof kDb>;
 
 export function upsertGuild(db: DB, guild: Guild) {
-    return db
-        .insert(schema.guild)
-        .values({
-            id: guild.id
-        })
-        .onConflictDoUpdate({
-            target: schema.guild.id,
-            set: {
-                updatedAt: new Date()
-            }
-        })
-        .returning()
-        .get();
+	return db
+		.insert(schema.guild)
+		.values({
+			id: guild.id
+		})
+		.onConflictDoUpdate({
+			target: schema.guild.id,
+			set: {
+				updatedAt: new Date()
+			}
+		})
+		.returning()
+		.get();
 }
 
 export function getGuildData(db: DB, guildId: string) {
-    return db
-        .select()
-        .from(schema.guild)
-        .where(sql`${schema.guild.id} = ${guildId}`)
-        .get()!;
+	return db
+		.select()
+		.from(schema.guild)
+		.where(sql`${schema.guild.id} = ${guildId}`)
+		.get()!;
 }

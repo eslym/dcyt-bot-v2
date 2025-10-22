@@ -1,85 +1,85 @@
 {
-  "ACTION": {
-    "ADD": "Add Notification",
-    "NEXT": "Next",
-    "PREVIOUS": "Previous",
-    "REMOVE": "Remove Notification",
-    "TOGGLE": {
-      "LIVE": {
-        "DESCRIPTION": "Notify when an unattended live/premier starts",
-        "TITLE": "Unattended Live"
-      },
-      "PUBLISH": {
-        "DESCRIPTION": "Notify when new video publish",
-        "TITLE": "Publish"
-      },
-      "RESCHEDULE": {
-        "DESCRIPTION": "Notify when a live/premier is rescheduled",
-        "TITLE": "Reschedule"
-      },
-      "SCHEDULE": {
-        "DESCRIPTION": "Notify when the channel schedule a new live/premier",
-        "TITLE": "Schedule"
-      },
-      "UPCOMING": {
-        "DESCRIPTION": "Notify when 5 minutes before live/premier starts",
-        "TITLE": "Upcoming"
-      }
-    }
-  },
-  "COMMAND": {
-    "CONFIG": {
-      "DESCRIPTION": "Configure the global notification messages",
-      "OPTIONS": {
-        "CHANNEL": "Select a channel to configure"
-      }
-    },
-    "HELP": {
-      "DESCRIPTION": "Help"
-    },
-    "LIST": {
-      "DESCRIPTION": "List the notification in this channel",
-      "OPTIONS": {
-        "CHANNEL": "Specify a channel to list notifications"
-      }
-    },
-    "SUBSCRIBE": {
-      "DESCRIPTION": "Subscribe a notification",
-      "OPTIONS": {
-        "CHANNEL": "Youtube URL or channel handle",
-        "TO": "The channel to send notification (default is current channel)"
-      }
-    }
-  },
-  "ERROR": {
-    "INVALID_URL": "Invalid Youtube URL or handle",
-    "NOT_FOUND": "Cannot find the given channel",
-    "UNKNOWN": "Unknown error"
-  },
-  "HINT": {
-    "CHANNEL": "Channel: <#{{channel}}>",
-    "NO_SUBSCRIPTIONS": "No notification enabled in <#{{channel}}>",
-    "SELECT_CATEGORY": "Select a category to edit",
-    "SELECT_CHANNEL": "Select a Youtube channel to view",
-    "SELECT_ENABLE": "Select categories to enable notification",
-    "SELECT_LANGUAGE": "Select a language",
-    "SETTINGS_FOR": "Settings for <#{{channel}}>"
-  },
-  "LABEL": {
-    "LANGUAGE": "Notification Language",
-    "TEMPLATE": "Template Text"
-  },
-  "LANG": "English",
-  "NOTIFICATION": {
-    "LIVE": "@here, {{channel}} started a {{type}}.\n{{{url}}}",
-    "PUBLISH": "@here, {{channel}} published a new video.\n{{{url}}}",
-    "RESCHEDULE": "@here, {{channel}} rescheduled a {{type}} to <t:{{timestamp}}:F> (<t:{{timestamp}}:R>).\n{{{url}}}",
-    "SCHEDULE": "@here, {{channel}} scheduled a new {{type}} at <t:{{timestamp}}:F> (<t:{{timestamp}}:R>).\n{{{url}}}",
-    "UPCOMING": "@here, {{channel}}'s {{type}} is about to start.\n{{{url}}}"
-  },
-  "TYPE": {
-    "LIVE": "live stream",
-    "PREMIERE": "premiere",
-    "VIDEO": "Video"
-  }
+	"ACTION": {
+		"ADD": "Add Notification",
+		"NEXT": "Next",
+		"PREVIOUS": "Previous",
+		"REMOVE": "Remove Notification",
+		"TOGGLE": {
+			"LIVE": {
+				"DESCRIPTION": "Notify when an unattended live/premier starts",
+				"TITLE": "Unattended Live"
+			},
+			"PUBLISH": {
+				"DESCRIPTION": "Notify when new video publish",
+				"TITLE": "Publish"
+			},
+			"RESCHEDULE": {
+				"DESCRIPTION": "Notify when a live/premier is rescheduled",
+				"TITLE": "Reschedule"
+			},
+			"SCHEDULE": {
+				"DESCRIPTION": "Notify when the channel schedule a new live/premier",
+				"TITLE": "Schedule"
+			},
+			"UPCOMING": {
+				"DESCRIPTION": "Notify when 5 minutes before live/premier starts",
+				"TITLE": "Upcoming"
+			}
+		}
+	},
+	"COMMAND": {
+		"CONFIG": {
+			"DESCRIPTION": "Configure the global notification messages",
+			"OPTIONS": {
+				"CHANNEL": "Select a channel to configure"
+			}
+		},
+		"HELP": {
+			"DESCRIPTION": "Help"
+		},
+		"LIST": {
+			"DESCRIPTION": "List the notification in this channel",
+			"OPTIONS": {
+				"CHANNEL": "Specify a channel to list notifications"
+			}
+		},
+		"SUBSCRIBE": {
+			"DESCRIPTION": "Subscribe a notification",
+			"OPTIONS": {
+				"CHANNEL": "Youtube URL or channel handle",
+				"TO": "The channel to send notification (default is current channel)"
+			}
+		}
+	},
+	"ERROR": {
+		"INVALID_URL": "Invalid Youtube URL or handle",
+		"NOT_FOUND": "Cannot find the given channel",
+		"UNKNOWN": "Unknown error"
+	},
+	"HINT": {
+		"CHANNEL": "Channel: <#{{channel}}>",
+		"NO_SUBSCRIPTIONS": "No notification enabled in <#{{channel}}>",
+		"SELECT_CATEGORY": "Select a category to edit",
+		"SELECT_CHANNEL": "Select a Youtube channel to view",
+		"SELECT_ENABLE": "Select categories to enable notification",
+		"SELECT_LANGUAGE": "Select a language",
+		"SETTINGS_FOR": "Settings for <#{{channel}}>"
+	},
+	"LABEL": {
+		"LANGUAGE": "Notification Language",
+		"TEMPLATE": "Template Text"
+	},
+	"LANG": "English",
+	"NOTIFICATION": {
+		"LIVE": "@here, {{channel}} started a {{type}}.\n{{{url}}}",
+		"PUBLISH": "@here, {{channel}} published a new video.\n{{{url}}}",
+		"RESCHEDULE": "@here, {{channel}} rescheduled a {{type}} to <t:{{timestamp}}:F> (<t:{{timestamp}}:R>).\n{{{url}}}",
+		"SCHEDULE": "@here, {{channel}} scheduled a new {{type}} at <t:{{timestamp}}:F> (<t:{{timestamp}}:R>).\n{{{url}}}",
+		"UPCOMING": "@here, {{channel}}'s {{type}} is about to start.\n{{{url}}}"
+	},
+	"TYPE": {
+		"LIVE": "live stream",
+		"PREMIERE": "premiere",
+		"VIDEO": "Video"
+	}
 }

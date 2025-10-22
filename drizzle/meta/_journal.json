@@ -1,27 +1,27 @@
 {
-  "version": "5",
-  "dialect": "sqlite",
-  "entries": [
-    {
-      "idx": 0,
-      "version": "5",
-      "when": 1712560321111,
-      "tag": "0000_chubby_ikaris",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "5",
-      "when": 1712590302907,
-      "tag": "0001_chief_gressill",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "5",
-      "when": 1713406892940,
-      "tag": "0002_curly_demogoblin",
-      "breakpoints": true
-    }
-  ]
+	"version": "5",
+	"dialect": "sqlite",
+	"entries": [
+		{
+			"idx": 0,
+			"version": "5",
+			"when": 1712560321111,
+			"tag": "0000_chubby_ikaris",
+			"breakpoints": true
+		},
+		{
+			"idx": 1,
+			"version": "5",
+			"when": 1712590302907,
+			"tag": "0001_chief_gressill",
+			"breakpoints": true
+		},
+		{
+			"idx": 2,
+			"version": "5",
+			"when": 1713406892940,
+			"tag": "0002_curly_demogoblin",
+			"breakpoints": true
+		}
+	]
 }
