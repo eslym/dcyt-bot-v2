@@ -19,7 +19,8 @@ import {
 	ButtonStyle,
 	StringSelectMenuInteraction,
 	ActivityType,
-	type ModalMessageModalSubmitInteraction
+	type ModalMessageModalSubmitInteraction,
+	MessageFlags
 } from 'discord.js';
 import type { Context } from './ctx';
 import { kClient, kDb, kOptions, kYoutube } from './symbols';
@@ -146,7 +147,6 @@ async function getGuildId(
 					.setDescription('Unable to determine the guild for this interaction, DM mode is not supported.')
 					.setColor('#ff0000')
 			],
-			ephemeral: true
 		});
 		throw true;
 	}
@@ -273,7 +273,7 @@ async function listSubscriptionInteraction(
 		.get()!.count;
 	if (interaction.isChatInputCommand()) {
 		await interaction.deferReply({
-			ephemeral: true
+			flags: MessageFlags.Ephemeral
 		});
 	} else {
 		await interaction.deferUpdate();
@@ -366,14 +366,14 @@ const commandHandlers: Record<string, (ctx: Context, interaction: ChatInputComma
 				if (!channel) {
 					await interaction.reply({
 						components: configComponents(guildData.language ?? 'en'),
-						ephemeral: true
+						flags: MessageFlags.Ephemeral
 					});
 					return;
 				}
 				await interaction.reply({
 					content: Mustache.render(l.HINT.SETTINGS_FOR, { channel: channel.id }),
 					components: configComponents(guildData.language ?? 'en', channel.id),
-					ephemeral: true
+					flags: MessageFlags.Ephemeral
 				});
 			})
 			.catch((err) => {
@@ -386,7 +386,7 @@ const commandHandlers: Record<string, (ctx: Context, interaction: ChatInputComma
 			.then(async (guildId) => {
 				const source = interaction.options.getString('channel', true);
 				await interaction.deferReply({
-					ephemeral: true
+					flags: MessageFlags.Ephemeral
 				});
 				const db = ctx.get(kDb);
 				const guildData = getGuildData(db, guildId);
@@ -433,7 +433,7 @@ const commandHandlers: Record<string, (ctx: Context, interaction: ChatInputComma
 				const guild = getGuildData(db, guildId);
 				await interaction.reply({
 					content: helpText[guild.language ?? 'en'],
-					ephemeral: true,
+					flags: MessageFlags.Ephemeral,
 					embeds: []
 				});
 			})
@@ -609,7 +609,7 @@ const selectMenuHandlers: Record<string, (ctx: Context, interaction: StringSelec
 						)
 						.get();
 					await interaction.deferReply({
-						ephemeral: true
+						flags: MessageFlags.Ephemeral
 					});
 					await youtubeChannelInteraction(interaction, ytCh, sub, dcCh, l);
 				})
@@ -807,7 +807,7 @@ export function setupClient(ctx: Context) {
 	const options = ctx.get(kOptions);
 	const db = ctx.get(kDb);
 
-	client.on('ready', async () => {
+	client.on('clientReady', async () => {
 		if (client.user) {
 			client.user.setActivity({
 				name: 'use /help',
