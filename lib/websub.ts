@@ -180,6 +180,9 @@ async function videoCallback(ctx: Context, ch: YoutubeChannel, body: Buffer) {
 			return;
 		}
 		console.log('[http]', 'Incoming notification', { videoData, notifyType });
+		if ((!videoData.live?.livedAt && !videoData.live?.scheduledAt) || videoData.live?.endedAt) {
+			return;
+		}
 		publishNotification(ctx.get(kClient), db, videoData, notifyType);
 		return;
 	}

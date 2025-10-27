@@ -90,10 +90,10 @@ export function setupCron(ctx: Context) {
 						[`${notifyType.toLowerCase()}NotifiedAt`]: new Date()
 					})
 					.run();
+				console.log('[cron]', 'Found live', { videoData, notifyType });
 				if ((!videoData.live?.livedAt && !videoData.live?.scheduledAt) || videoData.live?.endedAt) {
 					return;
 				}
-				console.log('[cron]', 'Found live', { videoData, notifyType });
 				publishNotification(ctx.get(kClient), db, videoData, notifyType);
 			}
 		}
