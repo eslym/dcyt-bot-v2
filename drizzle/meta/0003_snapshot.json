@@ -1,6 +1,8 @@
 {
   "version": "6",
   "dialect": "sqlite",
+  "id": "fec941fa-a252-45f3-bc57-86405d800501",
+  "prevId": "dceae80b-ec0d-418a-805e-ee9d52a5b04a",
   "tables": {
     "Guild": {
       "name": "Guild",
@@ -67,7 +69,8 @@
           "type": "integer",
           "primaryKey": false,
           "notNull": false,
-          "autoincrement": false
+          "autoincrement": false,
+          "default": "(CURRENT_TIMESTAMP)"
         }
       },
       "indexes": {},
@@ -140,7 +143,8 @@
           "type": "integer",
           "primaryKey": false,
           "notNull": false,
-          "autoincrement": false
+          "autoincrement": false,
+          "default": "(CURRENT_TIMESTAMP)"
         }
       },
       "indexes": {},
@@ -148,15 +152,15 @@
         "GuildChannel_guildId_Guild_id_fk": {
           "name": "GuildChannel_guildId_Guild_id_fk",
           "tableFrom": "GuildChannel",
+          "tableTo": "Guild",
           "columnsFrom": [
             "guildId"
           ],
-          "tableTo": "Guild",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "cascade",
-          "onDelete": "cascade"
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
         }
       },
       "compositePrimaryKeys": {},
@@ -170,6 +174,13 @@
           "type": "text",
           "primaryKey": true,
           "notNull": true,
+          "autoincrement": false
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
           "autoincrement": false
         },
         "webhookId": {
@@ -206,7 +217,8 @@
           "type": "integer",
           "primaryKey": false,
           "notNull": false,
-          "autoincrement": false
+          "autoincrement": false,
+          "default": "(CURRENT_TIMESTAMP)"
         }
       },
       "indexes": {
@@ -216,6 +228,13 @@
             "webhookId"
           ],
           "isUnique": true
+        },
+        "YoutubeChannel_webhookExpiresAt_index": {
+          "name": "YoutubeChannel_webhookExpiresAt_index",
+          "columns": [
+            "webhookExpiresAt"
+          ],
+          "isUnique": false
         }
       },
       "foreignKeys": {},
@@ -241,43 +260,43 @@
         },
         "notifyPublish": {
           "name": "notifyPublish",
-          "type": "numeric",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "'true'"
+          "default": true
         },
         "notifySchedule": {
           "name": "notifySchedule",
-          "type": "numeric",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "'true'"
+          "default": true
         },
         "notifyReschedule": {
           "name": "notifyReschedule",
-          "type": "numeric",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "'true'"
+          "default": true
         },
         "notifyUpcoming": {
           "name": "notifyUpcoming",
-          "type": "numeric",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "'true'"
+          "default": true
         },
         "notifyLive": {
           "name": "notifyLive",
-          "type": "numeric",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "'true'"
+          "default": true
         },
         "publishText": {
           "name": "publishText",
@@ -327,7 +346,8 @@
           "type": "integer",
           "primaryKey": false,
           "notNull": false,
-          "autoincrement": false
+          "autoincrement": false,
+          "default": "(CURRENT_TIMESTAMP)"
         }
       },
       "indexes": {},
@@ -335,28 +355,28 @@
         "YoutubeSubscription_youtubeChannelId_YoutubeChannel_id_fk": {
           "name": "YoutubeSubscription_youtubeChannelId_YoutubeChannel_id_fk",
           "tableFrom": "YoutubeSubscription",
+          "tableTo": "YoutubeChannel",
           "columnsFrom": [
             "youtubeChannelId"
           ],
-          "tableTo": "YoutubeChannel",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "cascade",
-          "onDelete": "cascade"
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
         },
         "YoutubeSubscription_guildChannelId_GuildChannel_id_fk": {
           "name": "YoutubeSubscription_guildChannelId_GuildChannel_id_fk",
           "tableFrom": "YoutubeSubscription",
+          "tableTo": "GuildChannel",
           "columnsFrom": [
             "guildChannelId"
           ],
-          "tableTo": "GuildChannel",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "cascade",
-          "onDelete": "cascade"
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
         }
       },
       "compositePrimaryKeys": {
@@ -470,23 +490,34 @@
           "type": "integer",
           "primaryKey": false,
           "notNull": false,
-          "autoincrement": false
+          "autoincrement": false,
+          "default": "(CURRENT_TIMESTAMP)"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "YoutubeVideo_notificationState_index": {
+          "name": "YoutubeVideo_notificationState_index",
+          "columns": [
+            "livedAt",
+            "liveNotifiedAt",
+            "deletedAt"
+          ],
+          "isUnique": false
+        }
+      },
       "foreignKeys": {
         "YoutubeVideo_channelId_YoutubeChannel_id_fk": {
           "name": "YoutubeVideo_channelId_YoutubeChannel_id_fk",
           "tableFrom": "YoutubeVideo",
+          "tableTo": "YoutubeChannel",
           "columnsFrom": [
             "channelId"
           ],
-          "tableTo": "YoutubeChannel",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "cascade",
-          "onDelete": "cascade"
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
         }
       },
       "compositePrimaryKeys": {},
@@ -495,9 +526,8 @@
   },
   "enums": {},
   "_meta": {
+    "schemas": {},
     "tables": {},
     "columns": {}
-  },
-  "id": "c87fa9df-86a8-4644-a2bc-3f5038d5647c",
-  "prevId": "00000000-0000-0000-0000-000000000000"
+  }
 }

@@ -1,4 +1,4 @@
-import { sqliteTable, text, uniqueIndex, primaryKey, integer } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, uniqueIndex, primaryKey, integer, index } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 import { ulid } from 'ulidx';
 
@@ -47,28 +47,39 @@ export const youtubeChannel = sqliteTable(
 	},
 	(table) => {
 		return {
-			webhookIdKey: uniqueIndex('YoutubeChannel_webhookId_key').on(table.webhookId)
+			webhookIdKey: uniqueIndex('YoutubeChannel_webhookId_key').on(table.webhookId),
+			expiresIndex: index('YoutubeChannel_webhookExpiresAt_index').on(table.webhookExpiresAt)
 		};
 	}
 );
 
-export const youtubeVideo = sqliteTable('YoutubeVideo', {
-	id: text('id').primaryKey().notNull(),
-	channelId: text('channelId')
-		.notNull()
-		.references(() => youtubeChannel.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
-	type: text('type').notNull(),
-	title: text('title').notNull(),
-	scheduledAt: integer('scheduledAt', { mode: 'timestamp_ms' }),
-	livedAt: integer('livedAt', { mode: 'timestamp_ms' }),
-	deletedAt: integer('deletedAt', { mode: 'timestamp_ms' }),
-	publishNotifiedAt: integer('publishNotifiedAt', { mode: 'timestamp_ms' }),
-	scheduleNotifiedAt: integer('scheduleNotifiedAt', { mode: 'timestamp_ms' }),
-	rescheduleNotifiedAt: integer('rescheduleNotifiedAt', { mode: 'timestamp_ms' }),
-	upcomingNotifiedAt: integer('upcomingNotifiedAt', { mode: 'timestamp_ms' }),
-	liveNotifiedAt: integer('liveNotifiedAt', { mode: 'timestamp_ms' }),
-	...timestamps
-});
+export const youtubeVideo = sqliteTable(
+	'YoutubeVideo',
+	{
+		id: text('id').primaryKey().notNull(),
+		channelId: text('channelId')
+			.notNull()
+			.references(() => youtubeChannel.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+		type: text('type').notNull(),
+		title: text('title').notNull(),
+		scheduledAt: integer('scheduledAt', { mode: 'timestamp_ms' }),
+		livedAt: integer('livedAt', { mode: 'timestamp_ms' }),
+		deletedAt: integer('deletedAt', { mode: 'timestamp_ms' }),
+		publishNotifiedAt: integer('publishNotifiedAt', { mode: 'timestamp_ms' }),
+		scheduleNotifiedAt: integer('scheduleNotifiedAt', { mode: 'timestamp_ms' }),
+		rescheduleNotifiedAt: integer('rescheduleNotifiedAt', { mode: 'timestamp_ms' }),
+		upcomingNotifiedAt: integer('upcomingNotifiedAt', { mode: 'timestamp_ms' }),
+		liveNotifiedAt: integer('liveNotifiedAt', { mode: 'timestamp_ms' }),
+		...timestamps
+	},
+	(table) => ({
+		notificationStateIndex: index('YoutubeVideo_notificationState_index').on(
+			table.livedAt,
+			table.liveNotifiedAt,
+			table.deletedAt
+		)
+	})
+);
 
 export const youtubeSubscription = sqliteTable(
 	'YoutubeSubscription',

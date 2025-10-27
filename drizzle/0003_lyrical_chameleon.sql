@@ -1,0 +1,2 @@
+CREATE INDEX `YoutubeChannel_webhookExpiresAt_index` ON `YoutubeChannel` (`webhookExpiresAt`);--> statement-breakpoint
+CREATE INDEX `YoutubeVideo_notificationState_index` ON `YoutubeVideo` (`livedAt`,`liveNotifiedAt`,`deletedAt`);
