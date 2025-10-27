@@ -27,6 +27,9 @@ export function determineNotificationType(
 	}
 	if (!videoData.live.scheduledAt) return; // youtube default livestream for channel, which we don't care
 	const schedule = videoData.live.scheduledAt.valueOf();
+	if (!videoRecord.scheduledAt) {
+		return NotificationType.SCHEDULE;
+	}
 	if (schedule !== videoRecord.scheduledAt?.valueOf()) {
 		return NotificationType.RESCHEDULE;
 	}
