@@ -5,7 +5,7 @@ import { convert } from 'xmlbuilder2';
 import { NotificationType, VideoType } from './enum';
 import { determineNotificationType, publishNotification, withCatch } from './utils';
 import * as t from './db/schema';
-import { count, sql } from 'drizzle-orm';
+import { count, sql, type InferInsertModel } from 'drizzle-orm';
 import type { YoutubeChannel } from './db/types';
 import { randomBytes } from 'crypto';
 
@@ -157,17 +157,23 @@ async function videoCallback(ctx: Context, ch: YoutubeChannel, body: Buffer) {
 				? NotificationType.PUBLISH
 				: videoData.live?.livedAt
 					? NotificationType.LIVE
-					: NotificationType.SCHEDULE;
-		db.insert(t.youtubeVideo)
-			.values({
-				id: videoId,
-				channelId: ch.id,
-				title: videoData.title,
-				type: videoData.type,
-				scheduledAt: videoData.live?.scheduledAt,
-				[`${notifyType.toLowerCase()}NotifiedAt`]: new Date()
-			})
-			.run();
+					: videoData.live?.scheduledAt
+						? NotificationType.SCHEDULE
+						: null;
+
+		const record: InferInsertModel<typeof t.youtubeVideo> = {
+			id: videoId,
+			channelId: ch.id,
+			title: videoData.title,
+			type: videoData.type,
+			scheduledAt: videoData.live?.scheduledAt
+		};
+
+		if (notifyType) {
+			(record as any)[`${notifyType.toLowerCase()}NotifiedAt`] = new Date();
+		}
+
+		db.insert(t.youtubeVideo).values(record).run();
 		if (videoData.live?.endedAt) {
 			console.log('[http]', 'Ignoring finished live content', videoData);
 			return;
@@ -180,7 +186,8 @@ async function videoCallback(ctx: Context, ch: YoutubeChannel, body: Buffer) {
 			return;
 		}
 		console.log('[http]', 'Incoming notification', { videoData, notifyType });
-		if ((!videoData.live?.livedAt && !videoData.live?.scheduledAt) || videoData.live?.endedAt) {
+		if (!notifyType) {
+			// Youtube API sometimes gives undefined timestamps for live videos
 			return;
 		}
 		publishNotification(ctx.get(kClient), db, videoData, notifyType);
