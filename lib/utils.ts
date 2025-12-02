@@ -16,7 +16,7 @@ export function ucfirst(str: string) {
 
 export function determineNotificationType(
 	videoData: YoutubeVideoData,
-	videoRecord: YoutubeVideo
+	videoRecord: Pick<YoutubeVideo, 'type' | 'scheduledAt'>
 ): NotificationType | undefined {
 	if (videoRecord.type === VideoType.VIDEO || !videoData.live || videoData.live.endedAt) {
 		return;
@@ -26,10 +26,10 @@ export function determineNotificationType(
 		return NotificationType.LIVE;
 	}
 	if (!videoData.live.scheduledAt) return; // youtube default livestream for channel, which we don't care
-	const schedule = videoData.live.scheduledAt.valueOf();
 	if (!videoRecord.scheduledAt) {
 		return NotificationType.SCHEDULE;
 	}
+	const schedule = videoData.live.scheduledAt.valueOf();
 	if (schedule !== videoRecord.scheduledAt?.valueOf()) {
 		return NotificationType.RESCHEDULE;
 	}

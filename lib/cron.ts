@@ -2,7 +2,7 @@ import type { Context } from './ctx';
 import { kClient, kDb, kFetcher, kOptions } from './symbols';
 import cron from 'node-cron';
 import { postWebsub, topicUrl } from './websub';
-import { NotificationType, VideoType } from './enum';
+import { VideoType } from './enum';
 import { determineNotificationType, publishNotification } from './utils';
 import * as t from './db/schema';
 import { count, sql } from 'drizzle-orm';
@@ -74,26 +74,30 @@ export function setupCron(ctx: Context) {
 					continue;
 				}
 				const videoData = await fetcher.fetchVideoData(video.value);
-				const notifyType =
-					videoData.type === 'VIDEO'
-						? NotificationType.PUBLISH
-						: videoData.live?.livedAt
-							? NotificationType.LIVE
-							: NotificationType.SCHEDULE;
-				db.insert(t.youtubeVideo)
-					.values({
-						id: videoData.id,
-						channelId: videoData.channelId,
-						title: videoData.title,
-						type: videoData.type,
-						scheduledAt: videoData.live?.scheduledAt,
-						[`${notifyType.toLowerCase()}NotifiedAt`]: new Date()
-					})
-					.run();
+				const videoRecord = {
+					id: videoData.id,
+					channelId: videoData.channelId,
+					title: videoData.title,
+					type: videoData.type,
+					scheduledAt: videoData.live?.scheduledAt ?? null
+				};
+				const notifyType = determineNotificationType(videoData, videoRecord);
+				if (notifyType) {
+					db.insert(t.youtubeVideo)
+						.values({
+							...videoRecord,
+							[`${notifyType.toLowerCase()}NotifiedAt`]: new Date()
+						})
+						.run();
+				} else {
+					db.insert(t.youtubeVideo).values(videoRecord).run();
+					return;
+				}
 				console.log('[cron]', 'Found live', { videoData, notifyType });
 				if ((!videoData.live?.livedAt && !videoData.live?.scheduledAt) || videoData.live?.endedAt) {
 					return;
 				}
+				console.log('[cron]', 'Found live', { videoData, notifyType });
 				publishNotification(ctx.get(kClient), db, videoData, notifyType);
 			}
 		}
@@ -120,7 +124,6 @@ export function setupCron(ctx: Context) {
 				)
 			)
 		);
-		const channels = new Map();
 		for (const videoRecord of records) {
 			const videoData = videoDatas.get(videoRecord.id)!;
 			if (videoData instanceof NotFoundError) {
@@ -146,7 +149,6 @@ export function setupCron(ctx: Context) {
 				scheduledAt: videoData.live?.scheduledAt ?? null,
 				livedAt: videoData.live?.livedAt ?? null
 			};
-			channels.set(videoData.channelId, videoData.channelName);
 			if (!notifyType) {
 				db.update(t.youtubeVideo)
 					.set(update)
