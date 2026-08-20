@@ -1,7 +1,6 @@
 import type { Context, ContextValue } from './ctx';
 import { kClient, kDb, kFetcher, kOptions } from './symbols';
 import { createHmac } from 'crypto';
-import { convert } from 'xmlbuilder2';
 import { NotificationType, VideoType } from './enum';
 import { determineNotificationType, publishNotification, withCatch } from './utils';
 import * as t from './db/schema';
@@ -124,7 +123,7 @@ interface DeletedFeed {
 
 async function videoCallback(ctx: Context, ch: YoutubeChannel, body: Buffer) {
 	const [db, fetcher] = ctx.getAll(kDb, kFetcher);
-	const xml = convert(body.toString('utf8'), { format: 'object' }) as any as {
+	const xml = Bun.XML.parse(body.toString('utf-8')) as any as {
 		feed: FeedEntry | DeletedFeed;
 	};
 	if ('at:deleted-entry' in xml.feed) {

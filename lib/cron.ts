@@ -1,6 +1,5 @@
 import type { Context } from './ctx';
 import { kClient, kDb, kFetcher, kOptions } from './symbols';
-import cron from 'node-cron';
 import { postWebsub, topicUrl } from './websub';
 import { VideoType } from './enum';
 import { determineNotificationType, publishNotification } from './utils';
@@ -13,7 +12,7 @@ import { fetchLiveID } from './youtube/crawler';
 export function setupCron(ctx: Context) {
 	const [client, db, opts, fetcher] = ctx.getAll(kClient, kDb, kOptions, kFetcher);
 
-	cron.schedule('*/15 * * * *', async () => {
+	Bun.cron('*/15 * * * *', async () => {
 		const chs = db
 			.select({
 				id: t.youtubeChannel.id,
@@ -46,7 +45,7 @@ export function setupCron(ctx: Context) {
 		}
 	});
 
-	cron.schedule('*/15 * * * *', async () => {
+	Bun.cron('*/15 * * * *', async () => {
 		const chs = db
 			.select({ id: t.youtubeChannel.id })
 			.from(t.youtubeChannel)
@@ -103,7 +102,7 @@ export function setupCron(ctx: Context) {
 		}
 	});
 
-	cron.schedule('*/5 * * * *', async () => {
+	Bun.cron('*/5 * * * *', async () => {
 		const notLived = sql`${t.youtubeVideo.livedAt} IS NULL`;
 		const notNotified = sql`${t.youtubeVideo.liveNotifiedAt} IS NULL`;
 		const notDeleted = sql`${t.youtubeVideo.deletedAt} IS NULL`;
