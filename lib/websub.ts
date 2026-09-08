@@ -9,7 +9,7 @@ import type { YoutubeChannel } from './db/types';
 import { randomBytes } from 'crypto';
 
 export function topicUrl(topic: string) {
-	const url = new URL('https://www.youtube.com/xml/feeds/videos.xml');
+	const url = new URL('https://www.youtube.com/feeds/videos.xml');
 	url.searchParams.set('channel_id', topic);
 	return url.toString();
 }
