@@ -190,7 +190,7 @@ async function crawlCanonicalLink(url: string | URL): Promise<string[]> {
 export async function fetchLiveID(channel: string) {
 	const link = `https://www.youtube.com/channel/${channel}/live`;
 	const href = await crawlCanonicalLink(link);
-	if (!href.length) {
+	if (!href.length || !URL.canParse(href[0])) {
 		return null;
 	}
 	const url = new URL(href[0]);
