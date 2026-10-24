@@ -49,10 +49,7 @@ function escapeDiscordMarkdown(text: string) {
 Mustache.escape = escapeDiscordMarkdown;
 
 export type ValidChannelTypes =
-	| ChannelType.GuildText
-	| ChannelType.AnnouncementThread
-	| ChannelType.PublicThread
-	| ChannelType.PrivateThread;
+	ChannelType.GuildText | ChannelType.AnnouncementThread | ChannelType.PublicThread | ChannelType.PrivateThread;
 
 const helpText: Record<string, string> = {
 	en: enHelp,
@@ -146,7 +143,7 @@ async function getGuildId(
 					.setTitle('Error')
 					.setDescription('Unable to determine the guild for this interaction, DM mode is not supported.')
 					.setColor('#ff0000')
-			],
+			]
 		});
 		throw true;
 	}
@@ -398,7 +395,8 @@ const commandHandlers: Record<string, (ctx: Context, interaction: ChatInputComma
 					});
 					return;
 				}
-				const targetChannel = interaction.options.getString('to', false) ?? interaction.channelId;
+				const targetChannel =
+					interaction.options.getChannel<ValidChannelTypes>('to', false)?.id ?? interaction.channelId;
 				const sub = db
 					.select()
 					.from(t.youtubeSubscription)
