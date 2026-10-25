@@ -25,6 +25,7 @@ const cli = cac();
 cli.command('', 'Run the bot')
 	.option('-t, --token [token]', 'Bot token', { default: env.DISCORD_TOKEN })
 	.option('-w, --websub [websub]', 'Websub origin', { default: env.WEBSUB_ORIGIN })
+	.option('--websub-debug [websubDebug]', 'Path to save websub payload for debug', { default: env.WEBSUB_DEBUG })
 	.option('-h, --host [host]', 'Host to listen on', { default: env.HOST || '0.0.0.0' })
 	.option('-p, --port [port]', 'Port to listen on', { default: env.PORT || '80' })
 	.option('-d, --database [database]', 'Database path', { default: resolve(env.DATABASE_URL || './db.sqlite') })
@@ -71,14 +72,24 @@ cli.command('', 'Run the bot')
 				port: opts.data.port,
 				development: false,
 				async fetch(request) {
+					const before = performance.now();
 					const result = await handleWebSub(ctx, request);
-					if (result) return result;
+					const elapsed = performance.now() - before;
+					if (result) {
+						console.log(
+							'[http]',
+							`${request.method} ${request.url} ${result.status} ${elapsed.toFixed(2)}ms`
+						);
+						return result;
+					}
 					if (request.method === 'HEAD' || request.method === 'GET') {
+						console.log('[http]', `${request.method} ${request.url} 404 ${elapsed.toFixed(2)}ms`);
 						return new Response('404 Not Found', {
 							status: 404,
 							headers: { 'Content-Type': 'text/plain' }
 						});
 					}
+					console.log('[http]', `${request.method} ${request.url} 405 ${elapsed.toFixed(2)}ms`);
 					return new Response('405 Method Not Allowed', {
 						status: 405,
 						headers: { 'Content-Type': 'text/plain' }

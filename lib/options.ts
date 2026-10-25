@@ -6,6 +6,7 @@ export const startOptions = z.object({
 		.string({ required_error: 'Websub origin must be present' })
 		.min(1, 'Websub origin must not be empty')
 		.url('Websub origin must be a valid URL'),
+	websubDebug: z.string().min(1, 'Websub debug must not be empty').optional(),
 	host: z.string({ required_error: 'Host must be present' }).min(1, 'Host must not be empty'),
 	port: z.coerce
 		.number({ required_error: 'Port must be present' })

@@ -7,6 +7,7 @@ import * as t from './db/schema';
 import { count, sql, type InferInsertModel } from 'drizzle-orm';
 import type { YoutubeChannel } from './db/types';
 import { randomBytes } from 'crypto';
+import { join } from 'path';
 
 export function topicUrl(topic: string) {
 	const url = new URL('https://www.youtube.com/feeds/videos.xml');
@@ -28,6 +29,7 @@ export async function postWebsub(mode: 'subscribe' | 'unsubscribe', topic: strin
 const methods = new Set(['HEAD', 'GET', 'POST']);
 
 export async function handleWebSub(ctx: Context, req: Request): Promise<Response | undefined> {
+	const config = ctx.get(kOptions);
 	if (!methods.has(req.method)) return undefined;
 	const url = new URL(req.url);
 	const match = url.pathname.match(/^\/websub\/([^\/]+)$/);
@@ -51,6 +53,14 @@ export async function handleWebSub(ctx: Context, req: Request): Promise<Response
 		}
 		const [algo, sig] = req.headers.get('x-hub-signature')!.split('=');
 		const buffer = Buffer.from(await req.arrayBuffer());
+		if (config.websubDebug) {
+			queueMicrotask(async () => {
+				const path = join(config.websubDebug!, `${Bun.randomUUIDv7()}.xml`);
+				await Bun.write(path, buffer).catch((err) =>
+					console.error('[http]', 'Failed to write websub debug file', { path, err })
+				);
+			});
+		}
 		if (
 			sig.toLowerCase() !==
 			createHmac(algo, ytCh.webhookSecret!)
