@@ -2,7 +2,7 @@ import type { Context } from './ctx';
 import { kClient, kDb, kFetcher, kOptions } from './symbols';
 import { postWebsub, topicUrl } from './websub';
 import { VideoType } from './enum';
-import { determineNotificationType, publishNotification } from './utils';
+import { determineNotificationType, logTimestamp, publishNotification } from './utils';
 import * as t from './db/schema';
 import { count, sql } from 'drizzle-orm';
 import { randomBytes } from 'crypto';
@@ -37,7 +37,7 @@ export function setupCron(ctx: Context) {
 			const callback = new URL(`./websub/${ch.webhookId}`, opts.websub);
 			const res = await postWebsub('subscribe', ch.id, ch.webhookSecret!, callback.toString());
 			if (!res.ok) {
-				console.error('[cron]', `Failed to subscribe to ${topicUrl(ch.id)}`, {
+				console.error(logTimestamp(), '[cron]', `Failed to subscribe to ${topicUrl(ch.id)}`, {
 					status: res.status,
 					body: await res.text()
 				});
@@ -58,7 +58,7 @@ export function setupCron(ctx: Context) {
 			const videos = await Promise.allSettled(ids.map((id) => fetchLiveID(id)));
 			for (const [i, video] of videos.entries()) {
 				if (video.status === 'rejected') {
-					console.error('[cron]', `Failed to fetch live ID for ${ids[i]}`, video.reason);
+					console.error(logTimestamp(), '[cron]', `Failed to fetch live ID for ${ids[i]}`, video.reason);
 					continue;
 				}
 				if (!video.value) {
@@ -92,11 +92,11 @@ export function setupCron(ctx: Context) {
 					db.insert(t.youtubeVideo).values(videoRecord).run();
 					return;
 				}
-				console.log('[cron]', 'Found live', { videoData, notifyType });
+				console.log(logTimestamp(), '[cron]', 'Found live', { videoData, notifyType });
 				if ((!videoData.live?.livedAt && !videoData.live?.scheduledAt) || videoData.live?.endedAt) {
 					return;
 				}
-				console.log('[cron]', 'Found live', { videoData, notifyType });
+				console.log(logTimestamp(), '[cron]', 'Found live', { videoData, notifyType });
 				publishNotification(ctx.get(kClient), db, videoData, notifyType);
 			}
 		}
@@ -135,7 +135,7 @@ export function setupCron(ctx: Context) {
 				continue;
 			}
 			if (videoData instanceof Error) {
-				console.error('[cron]', `Failed to fetch video data for ${videoRecord.title}`, {
+				console.error(logTimestamp(), '[cron]', `Failed to fetch video data for ${videoRecord.title}`, {
 					id: videoRecord.id,
 					error: videoData
 				});
@@ -162,7 +162,12 @@ export function setupCron(ctx: Context) {
 				})
 				.where(sql`${t.youtubeVideo.id} = ${videoId}`)
 				.run();
-			console.log('[cron]', 'Notification detected', { videoData, notifyType });
+			console.log(
+				logTimestamp(),
+				'[cron]',
+				'Notification detected',
+				Bun.inspect({ videoData, notifyType }, { depth: 3, compact: true, colors: process.stdout.isTTY })
+			);
 			await publishNotification(client, db, videoData, notifyType);
 		}
 	});

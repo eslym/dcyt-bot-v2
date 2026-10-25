@@ -2,7 +2,7 @@ import type { Context, ContextValue } from './ctx';
 import { kClient, kDb, kFetcher, kOptions } from './symbols';
 import { createHmac } from 'crypto';
 import { NotificationType, VideoType } from './enum';
-import { determineNotificationType, publishNotification, withCatch } from './utils';
+import { determineNotificationType, logTimestamp, publishNotification, withCatch } from './utils';
 import * as t from './db/schema';
 import { count, sql, type InferInsertModel } from 'drizzle-orm';
 import type { YoutubeChannel } from './db/types';
@@ -10,7 +10,7 @@ import { randomBytes } from 'crypto';
 import { join } from 'path';
 
 export function topicUrl(topic: string) {
-	const url = new URL('https://www.youtube.com/feeds/videos.xml');
+	const url = new URL('https://www.youtube.com/xml/feeds/videos.xml');
 	url.searchParams.set('channel_id', topic);
 	return url.toString();
 }
@@ -57,7 +57,7 @@ export async function handleWebSub(ctx: Context, req: Request): Promise<Response
 			queueMicrotask(async () => {
 				const path = join(config.websubDebug!, `${Bun.randomUUIDv7()}.xml`);
 				await Bun.write(path, buffer).catch((err) =>
-					console.error('[http]', 'Failed to write websub debug file', { path, err })
+					console.error(logTimestamp(), '[http]', 'Failed to write websub debug file', { path, err })
 				);
 			});
 		}
@@ -67,7 +67,7 @@ export async function handleWebSub(ctx: Context, req: Request): Promise<Response
 				.update(buffer as any)
 				.digest('hex')
 		) {
-			console.warn('[http]', 'Invalid signature', { id });
+			console.warn(logTimestamp(), '[http]', 'Invalid signature', { id });
 			return new Response('403 Forbidden', {
 				status: 403,
 				headers: {
@@ -145,7 +145,7 @@ async function videoCallback(ctx: Context, ch: YoutubeChannel, body: Buffer) {
 			})
 			.where(sql`${t.youtubeVideo.id} = ${videoId}`)
 			.run();
-		console.log('[http]', `Video deleted: ${xml.feed['at:deleted-entry'].link['@href']}`);
+		console.log(logTimestamp(), '[http]', `Video deleted: ${xml.feed['at:deleted-entry'].link['@href']}`);
 		return;
 	}
 	if (xml.feed.entry['yt:channelId'] !== ch.id) return;
@@ -184,17 +184,27 @@ async function videoCallback(ctx: Context, ch: YoutubeChannel, body: Buffer) {
 
 		db.insert(t.youtubeVideo).values(record).run();
 		if (videoData.live?.endedAt) {
-			console.log('[http]', 'Ignoring finished live content', videoData);
+			console.log(logTimestamp(), '[http]', 'Ignoring finished live content', videoData);
 			return;
 		}
 		const publishedAt = new Date(xml.feed.entry.published);
 		if (videoData.type === VideoType.VIDEO && Date.now() - publishedAt.valueOf() > 3 * 24 * 60 * 60 * 1000) {
 			// Sometimes youtube will send old video, so we set threshold to 3 days
 			// ignore the video if it's older than 3 days
-			console.log('[http]', 'Ignoring old video', videoData);
+			console.log(
+				logTimestamp(),
+				'[http]',
+				'Ignoring old video',
+				Bun.inspect(videoData, { depth: 3, compact: true, colors: process.stdout.isTTY })
+			);
 			return;
 		}
-		console.log('[http]', 'Incoming notification', { videoData, notifyType });
+		console.log(
+			logTimestamp(),
+			'[http]',
+			'Incoming notification',
+			Bun.inspect({ videoData, notifyType }, { depth: 3, compact: true, colors: process.stdout.isTTY })
+		);
 		if (!notifyType) {
 			// Youtube API sometimes gives undefined timestamps for live videos
 			return;
@@ -230,7 +240,12 @@ async function videoCallback(ctx: Context, ch: YoutubeChannel, body: Buffer) {
 		})
 		.where(sql`${t.youtubeVideo.id} = ${videoId}`)
 		.run();
-	console.log('[http]', 'Incoming notification', { videoData, notifyType });
+	console.log(
+		logTimestamp(),
+		'[http]',
+		'Incoming notification',
+		Bun.inspect({ videoData, notifyType }, { depth: 3, compact: true, colors: process.stdout.isTTY })
+	);
 	publishNotification(ctx.get(kClient), db, videoData, notifyType);
 }
 
@@ -255,9 +270,9 @@ export async function subscribeCallback(
 			.where(sql`${t.youtubeChannel.webhookId} = ${id}`)
 			.run();
 		if (ytCh.webhookExpiresAt) {
-			console.log('[http]', `Subscription for https://youtube.com/channel/${ytCh.id} renewed.`);
+			console.log(logTimestamp(), '[http]', `Subscription for https://youtube.com/channel/${ytCh.id} renewed.`);
 		} else {
-			console.log('[http]', `Subscribed to https://youtube.com/channel/${ytCh.id}`);
+			console.log(logTimestamp(), '[http]', `Subscribed to https://youtube.com/channel/${ytCh.id}`);
 		}
 		return;
 	}
@@ -268,7 +283,7 @@ export async function subscribeCallback(
 		})
 		.where(sql`${t.youtubeChannel.webhookId} = ${id}`)
 		.run();
-	console.log('[http]', `Unsubscribed from https://youtube.com/channel/${ytCh.id}`);
+	console.log(logTimestamp(), '[http]', `Unsubscribed from https://youtube.com/channel/${ytCh.id}`);
 }
 
 const env = Bun.env;

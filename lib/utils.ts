@@ -84,7 +84,7 @@ export async function publishNotification(
 			};
 			await ch.send(Mustache.render(template, data));
 		} catch (err) {
-			console.error('[http]', `Failed to notify ${sub.channelId}`, { error: err });
+			console.error(logTimestamp(), '[http]', `Failed to notify ${sub.channelId}`, { error: err });
 		}
 	}
 }
@@ -93,5 +93,26 @@ export function noop(...args: any[]): undefined;
 export function noop(): undefined {}
 
 export function withCatch(fn: () => Promise<any>, module: string): () => Promise<void> {
-	return () => fn().catch(console.error.bind(console, module));
+	return () => fn().catch(logError.bind(null, module));
+}
+
+const formatter = new Intl.DateTimeFormat(Intl.DateTimeFormat().resolvedOptions().locale, {
+	year: '2-digit',
+	month: '2-digit',
+	day: '2-digit',
+	hour: '2-digit',
+	minute: '2-digit',
+	second: '2-digit',
+	hour12: false,
+	timeZone: Bun.env.TZ ?? 'UTC'
+});
+
+export function logTimestamp(): string {
+	const now = new Date();
+	const ms = Math.round(now.getTime() / 10) % 100;
+	return `[${formatter.format(now)}.${ms.toString().padStart(2, '0')}]`;
+}
+
+export function logError(...params: any[]) {
+	console.error(logTimestamp(), ...params);
 }

@@ -30,7 +30,7 @@ import cnHelp from './help/zh-CN.md';
 import twHelp from './help/zh-TW.md';
 import { NotificationType } from './enum';
 import Mustache from 'mustache';
-import { ucfirst } from './utils';
+import { logError, logTimestamp, ucfirst } from './utils';
 import { checkSubs } from './websub';
 import * as t from './db/schema';
 import { count, sql } from 'drizzle-orm';
@@ -375,7 +375,7 @@ const commandHandlers: Record<string, (ctx: Context, interaction: ChatInputComma
 			})
 			.catch((err) => {
 				if (err === true) return;
-				console.error(err);
+				console.error(logTimestamp(), err);
 			});
 	},
 	async inspect(ctx, interaction) {
@@ -408,7 +408,7 @@ const commandHandlers: Record<string, (ctx: Context, interaction: ChatInputComma
 			})
 			.catch(async (err) => {
 				if (err === true) return;
-				console.error(err);
+				console.error(logTimestamp(), err);
 			});
 	},
 	async list(ctx, interaction) {
@@ -421,7 +421,7 @@ const commandHandlers: Record<string, (ctx: Context, interaction: ChatInputComma
 			})
 			.catch((err) => {
 				if (err === true) return;
-				console.error(err);
+				console.error(logTimestamp(), err);
 			});
 	},
 	async help(ctx, interaction) {
@@ -437,7 +437,7 @@ const commandHandlers: Record<string, (ctx: Context, interaction: ChatInputComma
 			})
 			.catch((err) => {
 				if (err === true) return;
-				console.error(err);
+				console.error(logTimestamp(), err);
 			});
 	}
 };
@@ -462,7 +462,7 @@ const selectMenuHandlers: Record<string, (ctx: Context, interaction: StringSelec
 				})
 				.catch((err) => {
 					if (err === true) return;
-					console.error(err);
+					console.error(logTimestamp(), err);
 				});
 		},
 		async configCategory(ctx, interaction) {
@@ -507,7 +507,7 @@ const selectMenuHandlers: Record<string, (ctx: Context, interaction: StringSelec
 				})
 				.catch((err) => {
 					if (err === true) return;
-					console.error(err);
+					console.error(logTimestamp(), err);
 				});
 		},
 		async notify(ctx, interaction) {
@@ -535,7 +535,7 @@ const selectMenuHandlers: Record<string, (ctx: Context, interaction: StringSelec
 				})
 				.catch((err) => {
 					if (err === true) return;
-					console.error(err);
+					console.error(logTimestamp(), err);
 				});
 		},
 		async template(ctx, interaction) {
@@ -588,7 +588,7 @@ const selectMenuHandlers: Record<string, (ctx: Context, interaction: StringSelec
 				})
 				.catch((err) => {
 					if (err === true) return;
-					console.error(err);
+					console.error(logTimestamp(), err);
 				});
 		},
 		async list(ctx, interaction) {
@@ -613,7 +613,7 @@ const selectMenuHandlers: Record<string, (ctx: Context, interaction: StringSelec
 				})
 				.catch((err) => {
 					if (err === true) return;
-					console.error(err);
+					console.error(logTimestamp(), err);
 				});
 		}
 	};
@@ -659,7 +659,7 @@ const modalHandlers: Record<string, (ctx: Context, interaction: ModalSubmitInter
 			})
 			.catch((err) => {
 				if (err === true) return;
-				console.error(err);
+				console.error(logTimestamp(), err);
 			});
 	},
 	async template(ctx, interaction) {
@@ -695,7 +695,7 @@ const modalHandlers: Record<string, (ctx: Context, interaction: ModalSubmitInter
 			})
 			.catch((err) => {
 				if (err === true) return;
-				console.error(err);
+				console.error(logTimestamp(), err);
 			});
 	}
 };
@@ -716,7 +716,7 @@ const buttonHandlers: Record<string, (ctx: Context, interaction: ButtonInteracti
 					.returning()
 					.get();
 				if (deleted) {
-					queueMicrotask(() => checkSubs(ctx, source).catch(console.error));
+					queueMicrotask(() => checkSubs(ctx, source).catch(logError));
 					return youtubeChannelInteraction(
 						interaction,
 						source,
@@ -756,7 +756,7 @@ const buttonHandlers: Record<string, (ctx: Context, interaction: ButtonInteracti
 					})
 					.returning()
 					.get();
-				queueMicrotask(() => checkSubs(ctx, source).catch(console.error));
+				queueMicrotask(() => checkSubs(ctx, source).catch(logError));
 				await youtubeChannelInteraction(
 					interaction,
 					source,
@@ -767,7 +767,7 @@ const buttonHandlers: Record<string, (ctx: Context, interaction: ButtonInteracti
 			})
 			.catch((err) => {
 				if (err === true) return;
-				console.error(err);
+				console.error(logTimestamp(), err);
 			});
 	},
 	async list(ctx, interaction) {
@@ -781,7 +781,7 @@ const buttonHandlers: Record<string, (ctx: Context, interaction: ButtonInteracti
 			})
 			.catch((err) => {
 				if (err === true) return;
-				console.error(err);
+				console.error(logTimestamp(), err);
 			});
 	}
 };
@@ -790,13 +790,34 @@ async function syncCommands(guild: Guild) {
 	return guild.commands
 		.set(guildCommands)
 		.then(async () => {
-			console.log('[bot]', 'Application commands synced.', { guild: guild.id });
+			console.log(
+				logTimestamp(),
+				'[bot]',
+				'Application commands synced.',
+				Bun.inspect(
+					{ guild: guild.id },
+					{
+						depth: 3,
+						colors: process.stdout.isTTY,
+						compact: true
+					}
+				)
+			);
 		})
 		.catch((error) => {
-			console.log('[bot]', 'Unable to sync commands', {
-				error,
-				guild: guild.id
-			});
+			console.log(
+				logTimestamp(),
+				'[bot]',
+				'Unable to sync commands',
+				Bun.inspect(
+					{ error, guild: guild.id },
+					{
+						depth: 3,
+						colors: process.stdout.isTTY,
+						compact: true
+					}
+				)
+			);
 		});
 }
 
@@ -811,7 +832,7 @@ export function setupClient(ctx: Context) {
 				name: 'use /help',
 				type: ActivityType.Custom
 			});
-			console.log('[bot]', `Logged in as ${client.user.tag}`);
+			console.log(logTimestamp(), '[bot]', `Logged in as ${client.user.tag}`);
 		}
 
 		if (client.application) {
@@ -819,8 +840,8 @@ export function setupClient(ctx: Context) {
 				'https://discord.com/oauth2/authorize?scope=bot+applications.commands&permissions=149504'
 			);
 			url.searchParams.append('client_id', client.application.id);
-			console.log('[bot]', `Invite link: ${url}`);
-			console.log('[bot]', 'Syncing global commands');
+			console.log(logTimestamp(), '[bot]', `Invite link: ${url}`);
+			console.log(logTimestamp(), '[bot]', 'Syncing global commands');
 			await client.application.commands.set(guildCommands);
 
 			for (const guild of client.guilds.cache.values()) {
@@ -839,17 +860,21 @@ export function setupClient(ctx: Context) {
 	});
 
 	client.on('guildCreate', (guild) => {
-		console.log('[bot]', 'Joined guild.', {
-			id: guild.id,
-			name: guild.name
-		});
+		console.log(
+			logTimestamp(),
+			'[bot]',
+			'Joined guild.',
+			Bun.inspect({ id: guild.id, name: guild.name }, { depth: 3, colors: process.stdout.isTTY, compact: true })
+		);
 		upsertGuild(db, guild);
 	});
 	client.on('guildDelete', async (guild) => {
-		console.log('[bot]', 'Leaved guild.', {
-			id: guild.id,
-			name: guild.name
-		});
+		console.log(
+			logTimestamp(),
+			'[bot]',
+			'Leaved guild.',
+			Bun.inspect({ id: guild.id, name: guild.name }, { depth: 3, colors: process.stdout.isTTY, compact: true })
+		);
 		const chs = db
 			.select({
 				id: t.youtubeChannel.id
@@ -863,7 +888,7 @@ export function setupClient(ctx: Context) {
 			.where(sql`${t.guild.id} = ${guild.id}`)
 			.run();
 		for (const ch of chs) {
-			await checkSubs(ctx, ch.id).catch(console.error);
+			await checkSubs(ctx, ch.id).catch(logError);
 		}
 	});
 

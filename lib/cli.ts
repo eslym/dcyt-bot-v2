@@ -15,6 +15,7 @@ import * as t from './db/schema';
 import { Context } from './ctx';
 import { APIDataFetcher } from './youtube/api';
 import { youtube } from '@googleapis/youtube';
+import { logTimestamp } from './utils';
 
 declare var MIGRATIONS_FOLDER: string;
 
@@ -77,19 +78,28 @@ cli.command('', 'Run the bot')
 					const elapsed = performance.now() - before;
 					if (result) {
 						console.log(
+							logTimestamp(),
 							'[http]',
 							`${request.method} ${request.url} ${result.status} ${elapsed.toFixed(2)}ms`
 						);
 						return result;
 					}
 					if (request.method === 'HEAD' || request.method === 'GET') {
-						console.log('[http]', `${request.method} ${request.url} 404 ${elapsed.toFixed(2)}ms`);
+						console.log(
+							logTimestamp(),
+							'[http]',
+							`${request.method} ${request.url} 404 ${elapsed.toFixed(2)}ms`
+						);
 						return new Response('404 Not Found', {
 							status: 404,
 							headers: { 'Content-Type': 'text/plain' }
 						});
 					}
-					console.log('[http]', `${request.method} ${request.url} 405 ${elapsed.toFixed(2)}ms`);
+					console.log(
+						logTimestamp(),
+						'[http]',
+						`${request.method} ${request.url} 405 ${elapsed.toFixed(2)}ms`
+					);
 					return new Response('405 Method Not Allowed', {
 						status: 405,
 						headers: { 'Content-Type': 'text/plain' }
@@ -101,7 +111,7 @@ cli.command('', 'Run the bot')
 		setupCron(ctx);
 
 		const cleanup = async () => {
-			console.log('Program shutting down');
+			console.log(logTimestamp(), 'Program shutting down');
 			ctx.get(kServer).stop();
 			await ctx.get(kClient).destroy();
 			db.close();
@@ -125,7 +135,7 @@ cli.command('clear-commands', 'Clear all commands from the bot')
 				await client.application.commands.set([]);
 			}
 			for (const guild of client.guilds.cache.values()) {
-				console.log('[bot]', 'Clearing commands', { guild: guild.id });
+				console.log(logTimestamp(), '[bot]', 'Clearing commands', { guild: guild.id });
 				await guild.commands.set([]);
 			}
 			process.exit(0);
